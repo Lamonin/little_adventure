@@ -6,16 +6,25 @@ uses GraphABC, ABCObjects, ABCSprites, Timers;
 type
   xycor = record x: integer; y: integer end;
   velocity = record x: integer; y: integer end;
-  static_entity = record obj: PictureABC; x: integer; y: integer; end;
-  
+  static_entity = record 
+                    obj: PictureABC; 
+                    x: integer;
+                    y: integer;
+                end;
+  check_coll_lines = record
+                        left: RectangleABC;
+                        right: RectangleABC;
+                        up: RectangleABC;
+                        down: RectangleABC;
+                     end;
   dyn_entity = record 
                   obj: SpriteABC; 
                   x: integer; 
                   y: integer; 
                   speed:integer; 
-                  vel: velocity 
-                end;
-
+                  vel: velocity;
+                  col_lines : check_coll_lines;
+               end;
 var
   cam_cor: xycor; bg, enemy, lock_zone: static_entity; player: dyn_entity;
   mirror: boolean;
@@ -54,31 +63,46 @@ begin
   if (Key = VK_Up) or (Key = VK_Down) then player.vel.y := 0;
 end;
 
-function plIntersect():boolean;
+procedure CreateCheckLines(var a:dyn_entity);
 begin
-  if ObjectUnderPoint(cam_cor.x + player.x - 32, cam_cor.y + player.y) = lock_zone.obj then
-    plIntersect := true
-  else if ObjectUnderPoint(cam_cor.x + player.x + 32, cam_cor.y + player.y) = lock_zone.obj then
-    plIntersect := true
-  else if ObjectUnderPoint(cam_cor.x + player.x , cam_cor.y + player.y + 32) = lock_zone.obj then
-    plIntersect := true
-  else if ObjectUnderPoint(cam_cor.x + player.x, cam_cor.y + player.y - 32) = lock_zone.obj then
-    plIntersect := true
-  else plIntersect := false;
+  var offset_x := 10;
+  var offset_y := 10;
+  a.col_lines.left := RectangleABC.Create(a.x, a.y, 36, 8);
+  a.col_lines.right := RectangleABC.Create(a.x, a.y, 36, 8);
+  a.col_lines.up := RectangleABC.Create(a.x, a.y, 8, 52);
+  a.col_lines.down := RectangleABC.Create(a.x, a.y, 8, 52);
+end;
+
+procedure MoveCheckLines(var a:dyn_entity);
+begin
+  a.col_lines.left.MoveTo(a.x-8, a.y+80);
+  a.col_lines.right.MoveTo(a.x+28, a.y+80);
+  a.col_lines.up.MoveTo(a.x+24, a.y+36);
+  a.col_lines.down.MoveTo(a.x+24, a.y+88);
 end;
 
 procedure MoveCam();
 begin
-  if plIntersect() then writeln('FUCK');
   
-  if (cam_cor.x + player.vel.x * player.speed + player.x) < 640 then
+  if (player.vel.x > 0) and not player.col_lines.left.Intersect(lock_zone.obj) then
     cam_cor.x := cam_cor.x + player.vel.x * player.speed
-  else begin
-    player.x := player.x - player.vel.x * player.speed;
-    player.obj.MoveTo(player.x, player.y);
-  end;
-  cam_cor.y := cam_cor.y + player.vel.y * player.speed;
+  else if (player.vel.x < 0) and not player.col_lines.right.Intersect(lock_zone.obj) then
+    cam_cor.x := cam_cor.x + player.vel.x * player.speed;
   
+  if (player.vel.y > 0) and not player.col_lines.up.Intersect(lock_zone.obj) then
+    cam_cor.y := cam_cor.y + player.vel.y * player.speed
+  else if (player.vel.y < 0) and not player.col_lines.down.Intersect(lock_zone.obj) then
+    cam_cor.y := cam_cor.y + player.vel.y * player.speed;
+  
+//  if (cam_cor.x + player.vel.x * player.speed + player.x) < 640 then
+//    cam_cor.x := cam_cor.x + player.vel.x * player.speed
+//  else begin
+//    player.x := player.x - player.vel.x * player.speed;
+//    player.obj.MoveTo(player.x, player.y);
+//  end;
+
+  
+  MoveCheckLines(player);
 end;
 
 procedure RedrawWorld();
@@ -92,7 +116,7 @@ procedure GameCycle();
 begin
    RedrawWorld();
    MoveCam();
-   RedrawObjects();
+   //RedrawObjects();
    Sleep(16);
 end;
 
@@ -107,6 +131,7 @@ begin
   
   player.x := Window.Width div 2;
   player.y := Window.Height div 2 - 96;
+  CreateCheckLines(player);
   
   mirror := false;
   
@@ -129,7 +154,7 @@ begin
   
   //Использование таймера почему-то помогает избавиться от проблем
   LockDrawingObjects();
-  var cycle := new Timer(24, GameCycle);
+  var cycle := new Timer(33, GameCycle);
   cycle.Start();
 
 //  while (true) do
