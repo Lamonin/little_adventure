@@ -94,14 +94,6 @@ begin
   else if (player.vel.y < 0) and not player.col_lines.down.Intersect(lock_zone.obj) then
     cam_cor.y := cam_cor.y + player.vel.y * player.speed;
   
-//  if (cam_cor.x + player.vel.x * player.speed + player.x) < 640 then
-//    cam_cor.x := cam_cor.x + player.vel.x * player.speed
-//  else begin
-//    player.x := player.x - player.vel.x * player.speed;
-//    player.obj.MoveTo(player.x, player.y);
-//  end;
-
-  
   MoveCheckLines(player);
 end;
 
@@ -110,14 +102,20 @@ begin
   bg.obj.MoveTo(cam_cor.x + bg.x, cam_cor.y + bg.y);
   lock_zone.obj.MoveTo(cam_cor.x + lock_zone.x, cam_cor.y + lock_zone.y);
   enemy.obj.MoveTo(cam_cor.x + 640-96, cam_cor.y + 360);
+  //RedrawObjects();
 end;
 
 procedure GameCycle();
 begin
-   RedrawWorld();
    MoveCam();
+   RedrawWorld();
    //RedrawObjects();
    Sleep(16);
+end;
+
+procedure GameCycle1();
+begin
+  RedrawWorld();
 end;
 
 begin
@@ -153,9 +151,14 @@ begin
   StartSprites();
   
   //Использование таймера почему-то помогает избавиться от проблем
-  LockDrawingObjects();
-  var cycle := new Timer(33, GameCycle);
+  //LockDrawingObjects();
+  //var cycle1 := new Timer(16, RedrawWorld);
+  //cycle1.Start();
+  
+  var cycle := new Timer(16, GameCycle);
   cycle.Start();
+  
+
 
 //  while (true) do
 //  begin
