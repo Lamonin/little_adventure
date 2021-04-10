@@ -12,10 +12,10 @@ type
                     y: integer;
                 end;
   check_coll_lines = record
-                        left: RectangleABC;
-                        right: RectangleABC;
-                        up: RectangleABC;
-                        down: RectangleABC;
+                        left: EllipseABC;
+                        right: EllipseABC;
+                        up: EllipseABC;
+                        down: EllipseABC;
                      end;
   dyn_entity = record 
                   obj: SpriteABC; 
@@ -64,21 +64,32 @@ begin
 end;
 
 procedure CreateCheckLines(var a:dyn_entity);
+var x,y,w,h:integer;
 begin
-  var offset_x := 10;
-  var offset_y := 10;
-  a.col_lines.left := RectangleABC.Create(a.x, a.y, 36, 8);
-  a.col_lines.right := RectangleABC.Create(a.x, a.y, 36, 8);
-  a.col_lines.up := RectangleABC.Create(a.x, a.y, 8, 52);
-  a.col_lines.down := RectangleABC.Create(a.x, a.y, 8, 52);
+  x:= a.obj.Position.X;
+  y:= a.obj.Position.Y;
+  w:= a.obj.Width;
+  h:= a.obj.Height;
+  a.col_lines.left := EllipseABC.Create(0+w div 2,0, w div 2, h);
+  ToBack(a.col_lines.left);
+  a.col_lines.right := EllipseABC.Create(w - w div 2,0, w div 2, h div 2);
+  ToBack(a.col_lines.right);
+  a.col_lines.up := EllipseABC.Create(0,0, w div 2, h div 2);
+  ToBack(a.col_lines.up);
+  a.col_lines.down := EllipseABC.Create(0,h-h div 2, w div 2, h div 2);
+  ToBack(a.col_lines.down);
 end;
 
 procedure MoveCheckLines(var a:dyn_entity);
+var w,h:integer;
 begin
-  a.col_lines.left.MoveTo(a.x-8, a.y+80);
-  a.col_lines.right.MoveTo(a.x+28, a.y+80);
-  a.col_lines.up.MoveTo(a.x+24, a.y+36);
-  a.col_lines.down.MoveTo(a.x+24, a.y+88);
+  w:= a.obj.Width;
+  h:= a.obj.Height;
+  
+  a.col_lines.left.MoveTo(a.x, a.y + h div 4);
+  a.col_lines.right.MoveTo(a.x + w - w div 2, a.y + h div 4);
+  a.col_lines.up.MoveTo(a.x, a.y);
+  a.col_lines.down.MoveTo(a.x, a.y + h-h div 2);
 end;
 
 procedure MoveCam();
@@ -129,7 +140,6 @@ begin
   
   player.x := Window.Width div 2;
   player.y := Window.Height div 2 - 96;
-  CreateCheckLines(player);
   
   mirror := false;
   
@@ -138,8 +148,10 @@ begin
   
   player.obj := SpriteABC.Create(player.x, player.y, 64, 'elf_anim.png');
   player.speed := 12;
+  CreateCheckLines(player);
+  
   enemy.obj := PictureABC.Create(640, 360, 'elf.png');
-  enemy.obj.Scale(4);
+  enemy.obj.Scale(3);
   
   player.obj.AddState('idle', 4);
   player.obj.AddState('run', 4);
@@ -158,7 +170,6 @@ begin
   var cycle := new Timer(16, GameCycle);
   cycle.Start();
   
-
 
 //  while (true) do
 //  begin
