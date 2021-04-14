@@ -48,45 +48,28 @@ end;
 function get_node_children(n:path_point):arr_point;
 var temp:arr_point = [];
 begin
-  foreach var s in n.sosedi do
-    if points[s.x, s.y].can_get then Include(temp, points[s.x, s.y]);
+  foreach var s in n.sosedi do Include(temp, points[s.x, s.y]);
   get_node_children:= temp;
 end;
 
 function find_path(start_point, f:path_point):path_point;
-var all_path:arr_point = [];
-    close:arr_point = [];
-    cannot:arr_point = [];
-    node, temp_p:path_point;
+var reachable : arr_point = [start_point];
+    explored, new_reachable:arr_point;
 begin
-  var childrens := get_node_children(start_point);
-  node := get_best_point(childrens, f); node.prev := nil;
-  while childrens <> [] do begin
-    if not (node in close) then Include(close, node);
-    include(all_path, node);
-    node := get_best_point(childrens, f);
-    
-    if (node.x=f.x) and (node.y=f.y) then begin
-      foreach var s in all_path do begin
-        find_path:=s;
-        exit;
+  while reachable <> [] do begin
+    var node := get_best_point(reachable, f);
+    Exclude(reachable, node);
+    Include(explored, node);
+    new_reachable := get_node_children(node) - explored;
+    foreach var s in new_reachable do
+      if not (s in reachable) then begin
+        Include(reachable, s);
       end;
-      //find_path:=build_path(node);
-      exit;
-    end;
-    
-    childrens := get_node_children(node) - close - cannot;
-    while (childrens=[]) and (node.prev<>nil) do begin
-      temp_p:=node.prev^;
-      Include(cannot, node);
-      node:=temp_p;
-      Exclude(close, node);
-      
-      childrens := get_node_children(node) - close - cannot;
-    end;
   end;
 end;
 
+{Расчет направления (то есть нормализация вектора) и умножение его на
+скорость юнита}
 function directionSpeed(x,y:integer; speed:real):dot;
 var v:dot;
 begin
