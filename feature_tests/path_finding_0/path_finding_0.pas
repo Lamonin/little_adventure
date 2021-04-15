@@ -25,23 +25,23 @@ var p:path_point;
 begin
   while to_node.prev^.prev <> nil do begin
     //writeln(to_node.prev^);
+    writeln('PATH ONE POINT IS ', to_node.x, ' ', to_node.y);
     p:=to_node.prev^;
-    writeln(p, ' ', to_node);
-    to_node:=points[p.x,p.y];
+    to_node:=p;
   end;
-  writeln(to_node.x, ' ', to_node.y);
+  
   build_path:= to_node;
 end;
 
 function get_best_point(nodes:List<path_point>; f:path_point):path_point;
-var min, weight:integer;
+var min, weight:real;
     best_p:path_point;
 begin
   min:=9999;
   
   for var i:=0 to nodes.Count-1 do begin
     var s:=nodes[i];
-    weight := abs(s.x-f.x) + abs(s.y-f.y);
+    weight := sqrt(sqr(f.x-s.x)+sqr(f.y-s.y));
     if weight < min then begin
       min:= weight;
       best_p:=s;
@@ -54,10 +54,7 @@ function get_node_children(n:path_point):List<path_point>;
 var temp:List<path_point>;
 begin
   temp:= new List<path_point>();
-  foreach var s in n.sosedi do begin 
-  if points[s.x, s.y].can_get then
-    temp.Add(points[s.x, s.y]);
-  end;
+  foreach var s in n.sosedi do temp.Add(points[s.x, s.y]);
   get_node_children:= temp;
 end;
 
@@ -65,7 +62,7 @@ procedure RemoveListElemements(var std:List<path_point>; minus:List<path_point>)
 begin
   for var j:=0 to minus.Count-1 do
     for var i:=0 to std.Count-1 do
-      if std[i] = minus[j] then begin
+      if (std[i].x = minus[j].x) and (std[i].y = minus[j].y) then begin
         std.RemoveAt(i); break; 
       end;
 end;
@@ -73,7 +70,7 @@ end;
 procedure RemoveListElem(var std:List<path_point>; elem:path_point);
 begin
   for var i:= 0 to std.Count-1 do
-    if std[i]=elem then begin
+    if (std[i].x=elem.x) and (std[i].y = elem.y) then begin
       std.RemoveAt(i);
       exit;
     end;
@@ -82,7 +79,7 @@ end;
 function ListContains(list_t:List<path_point>; elem:path_point):boolean;
 begin
   for var i:=0 to list_t.Count-1 do
-    if list_t[i]=elem then begin
+    if (list_t[i].x=elem.x) and (list_t[i].y=elem.y) then begin
       ListContains:=true;
       exit;
     end;
@@ -99,28 +96,29 @@ begin
   new_reachable:= new List<path_point>();
   
   reachable.Add(start_point);
+  
   while reachable.Count <> 0 do begin
     var node := get_best_point(reachable, f);
-    if (points[node.x, node.y].x=f.x) and (points[node.x, node.y].y=f.y) then begin
-      find_path:=build_path(points[node.x, node.y]);
-      exit;
-    end;
     
-    RemoveListElem(reachable, points[node.x, node.y]);
+    RemoveListElem(reachable, node);
+    explored.Add(node);
     
-    explored.Add(points[node.x, node.y]);
     new_reachable:= get_node_children(points[node.x, node.y]);
-    RemoveListElemements(new_reachable, explored);
+    //RemoveListElemements(new_reachable, explored);
     
     for var i:= 0 to new_reachable.Count-1 do begin
       var s:= new_reachable[i];
-      if not ListContains(reachable, s) then begin
+      if not ListContains(reachable, s) and not ListContains(explored, s) then begin
         points[s.x,s.y].prev:= @points[node.x, node.y];
         reachable.Add(points[s.x,s.y]);
       end;
+      if (s.y=f.x) and (s.x=f.y) then begin
+        find_path:=build_path(points[s.x, s.y]);
+        exit;
+      end;
     end;
   end;
-  //find_path:=start_point;
+  find_path:=start_point;
 end;
 
 {Расчет направления (то есть нормализация вектора) и умножение его на
@@ -130,23 +128,28 @@ var v:dot;
 begin
   var l := sqrt(sqr(x) + sqr(y));
   if l<>0 then begin
-    v.x := round(1/l * x*speed); v.y:=round(1/l * y *speed);
+    v.x := round(1/l * x * speed); v.y:=round(1/l * y *speed);
   end
   else begin
     v.x:=0; v.y:=0;
   end;
-  writeln(v.x, v.y);
   directionSpeed := v;
 end;
     
 procedure EnemyMove(var e:moving_object);
 var v, p:dot;
 begin
-  p.x:=(enemy.obj.Position.X-24) div 48; p.y:=(enemy.obj.Position.Y-24) div 48;
-  writeln(p.x, ' ', p.y);
+  p.x:=round((enemy.obj.Position.X+12) / 48); p.y:=round((enemy.obj.Position.Y+24) / 48);
   var path:= find_path(points[p.y,p.x], points[target.cross_point.y, target.cross_point.x]);
-  v := directionSpeed(path.x-p.x, path.y-p.y, 4.0);
+  v := directionSpeed(path.x-p.x, path.y-p.y, 8);
   enemy.obj.MoveOn(v.x, v.y);
+end;
+
+function CanAddChild(x,y:integer):boolean;
+begin
+  if (x>=0) and (x<=world_x_p) and (y>=0) and (y<=world_y_p) and points[x,y].can_get then
+    CanAddChild:=true
+  else CanAddChild:=false;
 end;
 
 begin
@@ -184,21 +187,19 @@ begin
   end;
   //r_rect.Destroy();
   
-  for var i:=0 to world_y_p-2 do
-    for var j:=0 to world_x_p-2 do begin
+  {СОЗДАНИЕ ПОТОМКОВ КАЖДОЙ КЛЕТКИ}
+  for var i:=0 to world_y_p-1 do
+    for var j:=0 to world_x_p-1 do begin
       if points[i,j].can_get then begin
-        var t:dot; t.x:=i; t.y:=j+1;
-        if points[i,j+1].can_get then begin
-          Include(points[i,j].sosedi, t);
-          t.x:=i; t.y:=j;
-          Include(points[i,j+1].sosedi, t);
-        end;
-        if points[i+1,j].can_get then begin
-          t.x:=i+1; t.y:=j;
-          Include(points[i,j].sosedi, t);
-          t.x:=i; t.y:=j;
-          Include(points[i+1,j].sosedi, t);
-        end;
+        var t:dot; 
+        t.x:=i; t.y:=j-1;
+        if CanAddChild(t.x,t.y) then Include(points[i,j].sosedi, t);
+        t.x:=i; t.y:=j+1;
+        if CanAddChild(t.x,t.y) then Include(points[i,j].sosedi, t);
+        t.x:=i-1; t.y:=j;
+        if CanAddChild(t.x,t.y) then Include(points[i,j].sosedi, t);
+        t.x:=i+1; t.y:=j;
+        if CanAddChild(t.x,t.y) then Include(points[i,j].sosedi, t);
       end;
     end;
   
@@ -217,8 +218,8 @@ begin
   target.y:=574;
   target.obj:=RectangleABC.Create(target.x, target.y, 24, 24, clBlack);
   
-  target.cross_point.x := (target.x-24) div 48;
-  target.cross_point.y := (target.y-24) div 48;
+  target.cross_point.x := round(target.x / 48);
+  target.cross_point.y := round(target.y / 48);
   
   while(true) do begin
     EnemyMove(enemy);
