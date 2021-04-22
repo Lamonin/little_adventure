@@ -53,4 +53,18 @@ type
     end;
     
   end;
+  
+  //Класс объекта для взаимодействия с ним
+  Prop = class
+    private
+    positon : V2 := new V2();
+    
+    public
+    obj : ObjectABC;
+    
+    constructor Create();
+    begin
+      
+    end;
+  end;
 end.

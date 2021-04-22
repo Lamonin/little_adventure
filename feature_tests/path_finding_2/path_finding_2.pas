@@ -237,7 +237,7 @@ begin
   {========================}
   
   {Загружаем и сохраняем в памяти карту границ.}
-  edge_zone := PictureABC.Create(0,0,'obstacle_ver_2.png');
+  edge_zone := PictureABC.Create(0,0,'..\..\img\obstacle_ver_2.png');
   
   {Создаем сетку доступных путей на уровне}
   
