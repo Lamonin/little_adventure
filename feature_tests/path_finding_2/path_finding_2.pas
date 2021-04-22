@@ -1,6 +1,6 @@
-﻿uses GraphABC, ABCObjects, Timers;
-type
+﻿uses GraphABC, ABCObjects;
 
+type
 cord = record x:integer; y:integer; end;
 
 Vector2 = class
@@ -216,7 +216,7 @@ begin
   
   var path := find_path(points[e_c.y,e_c.x],points[t_y,t_x]);
   var t := directionSpeed(path.x*48-e.Pos().x, path.y*48-e.Pos().y, 12.0);
-  writeln(t.x, t.y:3);
+  //writeln(t.x, t.y:3);
   e.MoveOn(t.x, t.y, 12);
 end;
 

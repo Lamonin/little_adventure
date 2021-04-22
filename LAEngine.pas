@@ -4,12 +4,10 @@ unit LAEngine;
 uses GraphABC, ABCObjects;
 
 type
-  Movable = class
+  Mover = class
     private
-    position : V2 = new V2();
+    position : V2;
     w,h:integer;
-    speed:integer;
-    hitpoint:integer;
     
     //Устанавливает позицию Mover и смещает графическое представление
     //по целочисленным координатам
@@ -28,28 +26,23 @@ type
     public
     obj:ObjectABC;
     
-    constructor Create(x,y,wt,ht, hp, spd:integer);
+    constructor Create(x,y,wt,ht:integer);
     begin
-      w:=wt; h:=ht; hitpoint:=hp; speed:=spd;
+      w:=wt; h:=ht;
+      obj := RectangleABC.Create(x - w div 2, y-h div 2, w, h, clRed);
       position.x := x; position.y:=y;
-    end;
-    
-    procedure MoveOn(v:V2);
-    begin
-      
     end;
     
     property pos:V2 read getPos write setPos;
   end;
   
-  Player = class(Movable)
+  Player = class(Mover)
     private
     
     public
-    constructor Create(x,y,w,h, hp, speed:integer; pathToSprite:string);
+    constructor Create(x,y,w,h:integer; pathToSprite:string);
     begin
-      inherited Create(x, y, w, h, hp, speed);
-      obj := RectangleABC.Create(x - w div 2, y-h div 2, w, h, clRed);
+      inherited Create(x,y,w,h);
     end;
     
   end;
