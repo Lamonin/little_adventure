@@ -4,7 +4,7 @@ unit LAEngine;
 uses GraphABC, ABCObjects;
 
 type
-  Movable = class
+  Entity = class
     private
     position : V2 = new V2();
     w,h:integer;
@@ -42,7 +42,7 @@ type
     property pos:V2 read getPos write setPos;
   end;
   
-  Player = class(Movable)
+  Player = class(Entity)
     private
     
     public
