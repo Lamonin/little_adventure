@@ -1,15 +1,19 @@
 ﻿{Модуль содержит основные переменные игры и функции}
 {$reference Vector2.dll}
 unit LAEngine;
-uses GraphABC, ABCObjects;
+uses GraphABC, ABCObjects, Timers;
 
 type
+  MsgType = (Attention, Dialog, Question);
+
   Entity = class
     private
     position : V2 = new V2();
     w,h:integer;
     speed:integer;
     hitpoint:integer;
+    msgABC:PictureABC;
+    taskTimer:Timer;
     
     //Устанавливает позицию Mover и смещает графическое представление
     //по целочисленным координатам
@@ -17,6 +21,8 @@ type
     begin
       position := v;
       obj.MoveTo(round(position.x - w div 2), round(position.y-h div 2));
+      if not (msgABC = nil) then
+        msgABC.MoveTo(round(position.x)-w, round(position.y)-h);
     end;
     
     //Возвращает позицию Mover
@@ -32,6 +38,34 @@ type
     begin
       w:=wt; h:=ht; hitpoint:=hp; speed:=spd;
       position.x := x; position.y:=y;
+    end;
+    
+    procedure ShowMessage(duration:integer; messageType:MsgType);
+    var path:string;
+    
+    begin
+      if (messageType = MsgType.Dialog) then begin
+        path := 'img\bubble_emote_0.png';
+      end
+      else if (messageType = MsgType.Attention) then begin
+        path := 'img\bubble_emote_1.png';
+      end
+      else if (messageType = MsgType.Question) then begin
+        path := 'img\bubble_emote_2.png';
+      end;
+      
+      if not (msgABC = nil) then begin
+        msgABC.Destroy();
+        taskTimer.Stop();
+      end;
+        
+      taskTimer := new Timer(duration, procedure() -> begin
+        msgABC.Destroy(); msgABC:=nil;
+        taskTimer.Stop();
+      end);
+      
+      msgABC := PictureABC.Create(round(position.x)-w, round(position.y)-h, path);
+      taskTimer.Start();
     end;
     
     procedure MoveOn(v:V2);

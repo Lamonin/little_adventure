@@ -13,7 +13,7 @@ begin
   var t := new Player(100,200, 24, 64, 10, 10, 'nothing');
   writeln(t.pos.x, t.pos.y:4);
   
-  writeln(t.pos.normalized.x, t.pos.normalized.y : 6);
+  writeln(t.pos.NMultiple(10).x, t.pos.NMultiple(10).y : 2);
   writeln(t.pos.magnitude);
   
   Sleep(512);
@@ -21,11 +21,12 @@ begin
   
   Sleep(512);
   t.pos -= new V2(0, 200);
+  t.ShowMessage(2000, MsgType.Question);
   
   Sleep(512);
-  t.pos += new V2(224.9, 11.2);
+  t.pos += new V2(224, 11);
+  t.ShowMessage(2000, MsgType.Attention);
   writeln(t.pos.x, t.pos.y:4);
-  writeln(t.pos.posInt.x, t.pos.posInt.y:4);
   
   Sleep(512);
   t.pos += new V2(0, 200);
