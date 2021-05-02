@@ -6,7 +6,7 @@ V2 = class
   //Возвращает длину вектора
   function Length():real;
   begin
-    result:= round(sqrt(sqr(x) + sqr(y)),3);
+    result:= round(sqrt(sqr(x) + sqr(y)), 3);
   end;
   
   public
