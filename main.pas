@@ -2,6 +2,7 @@
 заканчивается и обрабатывается.}
 
 {$reference engine/Vector2.dll}
+{$reference engine/JSONParser.dll}
 
 program main;
 uses GraphABC, ABCObjects;
@@ -11,6 +12,9 @@ begin
   //ПЕРВОНАЧАЛЬНЫЕ НАСТРОЙКИ ПРОЕКТА
   SetConsoleIO();
   var t := new Player(100, 200, 24, 64, 10, 10, 'nothing');
+  var m := new JSONFile('json2.json');
+  writeln(m.GetValue('object.chief.nene.haha'));
+  
   Sleep(1000);
   t.ShowMessage(3000, MsgType.Question);
   t.pos := new V2(300, 400);
