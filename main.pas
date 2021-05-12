@@ -13,7 +13,10 @@ begin
   SetConsoleIO();
   var t := new Player(100, 200, 24, 64, 10, 10, 'nothing');
   var m := new JSONFile('json2.json');
-  writeln(m.GetValue('object.chief.nene.haha'));
+  writeln(m.GetValue('object.master'));
+  m.SetValue('object.chief.nene.cocu.pupu.huhu', 2015);
+  //writeln(m.GetValue('object.chief.nene.cucu'));
+  m.SaveFile();
   
   Sleep(1000);
   t.ShowMessage(3000, MsgType.Question);
