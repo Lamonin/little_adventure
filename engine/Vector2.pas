@@ -52,8 +52,8 @@ V2 = class
     result := new V2();
     var l := Self.magnitude;
     if l<>0 then begin
-      result.x := round(round(1/l * x, 3) * length);
-      result.y := round(round(1/l * y, 3) * length);
+      result.x := round(1/l * x * length);
+      result.y := round(1/l * y * length);
     end;
   end;
   

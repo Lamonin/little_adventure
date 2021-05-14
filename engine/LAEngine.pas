@@ -12,6 +12,7 @@ type
     w,h:integer;
     speed:integer;
     hitpoint:integer;
+    
     msgABC:record
       obj:MultiPictureABC;
       taskTimer:Timer;
@@ -24,9 +25,9 @@ type
     procedure setPos(v:V2);
     begin
       position := v;
-      obj.MoveTo(round(position.x - w div 2), round(position.y-h div 2));
+      obj.MoveTo(pos.x - w div 2, pos.y - h div 2);
       if not (msgABC.obj = nil) then
-        msgABC.obj.MoveTo(position.x-w div 2 - 20, position.y-h div 2 - 32);
+        msgABC.obj.MoveTo(pos.x-w div 2 - 20, pos.y - h div 2 - 32);
     end;
     
     //Возвращает позицию Mover
@@ -63,7 +64,7 @@ type
         msgABC.taskTimer.Stop();
       end;
       
-      msgABC.obj := MultiPictureABC.Create(position.x-w div 2 - 20, position.y-h div 2 - 32, 32, 'img\bubble_start.png');
+      msgABC.obj := MultiPictureABC.Create(pos.x - w div 2 - 20, pos.y - h div 2 - 32, 32, 'img\bubble_start.png');
       msgABC.timerTick := 0; msgABC.msgImageCount := msgABC.obj.Count;
       
       msgABC.taskTimer := new Timer(64, procedure() -> begin
@@ -108,7 +109,7 @@ type
     private
     
     public
-    constructor Create(x,y,w,h, hp, speed:integer; pathToSprite:string);
+    constructor Create(x, y, w, h, hp, speed:integer; pathToSprite:string);
     begin
       inherited Create(x, y, w, h, hp, speed);
       obj := RectangleABC.Create(x - w div 2, y-h div 2, w, h, clRed);
