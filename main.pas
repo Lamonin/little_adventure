@@ -1,34 +1,25 @@
-﻿{main.pas - главный файл проекта. В нём игра начинается,
-заканчивается и обрабатывается.}
+﻿program summer_practice;
+uses GraphWPF, WPFObjects;
+uses LAEngine in 'engine/LAEngine.pas';
 
-{$reference engine/Vector2.dll}
-{$reference engine/JSONParser.dll}
+procedure OnDraw(dt:real);
+begin
+end;
 
-program main;
-uses GraphABC, ABCObjects;
-uses LAEngine in 'engine\LAEngine.pas';
+procedure KeyDown(k: Key);
+begin
+end;
 
 begin
-  //ПЕРВОНАЧАЛЬНЫЕ НАСТРОЙКИ ПРОЕКТА
-  SetConsoleIO();
-  var t := new Player(100, 200, 24, 64, 10, 10, 'nothing');
-  var m := new JSONFile('json2.json');
-  writeln(m.GetValue('object.master'));
-  m.SetValue('object.chief.nene.cocu.pupu.huhu', 2015);
-  //writeln(m.GetValue('object.chief.nene.cucu'));
-  m.SaveFile();
+  var p := new LSprite(100, 100, 'idle', LoadSprites('pig_idle_', 11), 100, true);
+  p.PlayAnim('idle');
   
-  Sleep(1000);
-  t.ShowMessage(3000, MsgType.Question);
-  t.pos := new V2(300, 400);
-  Sleep(3000);
-  t.ShowMessage(3000, MsgType.Attention);
-  t.pos := new V2(200, 300);
-  Sleep(3000);
-  t.ShowMessage(3000, MsgType.Dialog);
-  
-  //ЦИКЛ ОБРАБОТКИ ИГРОВОЙ ЛОГИКИ
-  while (true) do begin
-    
-  end;
+  OnDrawFrame := OnDraw;
+  OnKeyDown := KeyDown;
+//  while (true) do begin
+//    Redraw(procedure()-> 
+//    begin
+//       
+//    end);
+//  end;
 end.

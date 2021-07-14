@@ -1,133 +1,95 @@
-﻿{Модуль содержит основные переменные игры и функции}
-{$reference Vector2.dll}
-unit LAEngine;
-uses GraphABC, ABCObjects, Timers;
-
+﻿unit LAEngine;
+interface
+uses GraphWPF, WPFObjects, Timers;
 type
-  MsgType = (Attention, Dialog, Question);
-
-  Entity = class
+  spriteInfo=record
+    frames:array of string; //Кадры анимации
+    speed:integer; //Скорость анимации
+    isLoop:boolean; //Зациклена ли анимация
+    end;
+  LSprite = class
     private
-    position : V2 = new V2();
-    w,h:integer;
-    speed:integer;
-    hitpoint:integer;
+    anims:Dictionary<string, spriteInfo>; //Все анимации по их именам
+    defaultAnim:string; //Имя стандартной анимации
+    curAnim:spriteInfo; //Текущая анимация
+    sprite:PictureWPF;
     
-    msgABC:record
-      obj:MultiPictureABC;
-      taskTimer:Timer;
-      hasShowed:boolean;
-      timerTick, msgImageCount:integer;
+    updater:Timer;
+    frameNum:Integer; //Номер текущего кадра анимации
+    
+    procedure ChangeSprite();
+    begin
+      var t := sprite;
+      sprite:= new PictureWPF(t.LeftTop, curAnim.frames[frameNum]);
+      t.Destroy();
     end;
     
-    //Устанавливает позицию Mover и смещает графическое представление
-    //по целочисленным координатам
-    procedure setPos(v:V2);
+    //Обновление кадра изображения
+    procedure UpdateFrame();
     begin
-      position := v;
-      obj.MoveTo(pos.x - w div 2, pos.y - h div 2);
-      if not (msgABC.obj = nil) then
-        msgABC.obj.MoveTo(pos.x-w div 2 - 20, pos.y - h div 2 - 32);
-    end;
-    
-    //Возвращает позицию Mover
-    function getPos():V2;
-    begin
-      Result := position;
+      if (frameNum<curAnim.frames.Length) then begin
+        ChangeSprite();
+        frameNum+=1;
+      end
+      else begin
+        if not (curAnim.isLoop) then
+          PlayAnim(defaultAnim)
+        else
+          frameNum:=0;
+      end;
     end;
     
     public
-    obj:ObjectABC;
-    
-    constructor Create(x, y, wt, ht, hp, spd:integer);
+    ///Конструктор с инициализацией стандартной анимации с обычными параметрами
+    constructor Create(x,y:integer; aname:string; frames:array of string);
     begin
-      w:=wt; h:=ht; hitpoint:=hp; speed:=spd;
-      position.x := x; position.y:=y;
+      anims := new Dictionary<string, spriteInfo>();
+      defaultAnim:=aname;
+      AddAnim(aname, frames, 160, True); //Обычно анимация зациклена
+      sprite := new PictureWPF(x,y,anims[defaultAnim].frames[0]);
     end;
     
-    procedure ShowMessage(duration:integer; messageType:MsgType);
-    var path:string;
-    
+    ///Конструктор с инициализацией стандартной анимации
+    constructor Create(x,y:integer; aname:string; frames:array of string; speed:integer; looped:boolean);
     begin
-      if (messageType = MsgType.Dialog) then begin
-        path := 'img\bubble_emote_0.png';
+      anims := new Dictionary<string, spriteInfo>();
+      defaultAnim:=aname;
+      AddAnim(aname, frames, speed, looped);
+      sprite := new PictureWPF(x,y,anims[defaultAnim].frames[0]);
+    end;
+    
+    ///Добавляет новую анимацию с именем aname
+    procedure AddAnim(aname:string; frames:array of string; speed:integer; looped:boolean);
+    begin
+      var frame:spriteInfo;
+      frame.frames:= frames; frame.speed:=speed; frame.isLoop:=looped;
+      anims.Add(aname, frame);
+    end;
+    
+    procedure PlayAnim(aname:string);
+    begin
+      curAnim := anims[aname];
+      if (updater <> nil) then updater.Stop();
+      frameNum := 0;
+      if (curAnim.frames.Length=1) then begin
+        ChangeSprite();
       end
-      else if (messageType = MsgType.Attention) then begin
-        path := 'img\bubble_emote_1.png';
-      end
-      else if (messageType = MsgType.Question) then begin
-        path := 'img\bubble_emote_2.png';
+      else begin
+        updater := new Timer(curAnim.speed, UpdateFrame);
+        updater.Start();
       end;
-      
-      if not (msgABC.obj = nil) then begin
-        msgABC.obj.Destroy();
-        msgABC.taskTimer.Stop();
-      end;
-      
-      msgABC.obj := MultiPictureABC.Create(pos.x - w div 2 - 20, pos.y - h div 2 - 32, 32, 'img\bubble_start.png');
-      msgABC.timerTick := 0; msgABC.msgImageCount := msgABC.obj.Count;
-      
-      msgABC.taskTimer := new Timer(64, procedure() -> begin
-        if (msgABC.timerTick>=duration) then begin
-          if msgABC.hasShowed then begin
-            msgABC.hasShowed := false;
-            msgABC.obj.ChangePicture(32, 'img\bubble_start.png');
-            msgABC.obj.CurrentPicture := msgABC.msgImageCount;
-          end;
-          if (msgABC.obj.CurrentPicture > 1) then
-            msgABC.obj.PrevPicture()
-          else begin
-            msgABC.obj.Destroy(); msgABC.obj:=nil;
-            msgABC.taskTimer.Stop();
-          end;
-        end
-        else begin
-          msgABC.timerTick += 64;
-          if (msgABC.obj.CurrentPicture < msgABC.msgImageCount) then begin
-            duration -= 64;
-            msgABC.obj.NextPicture();
-          end
-          else if not msgABC.hasShowed then begin
-            msgABC.hasShowed := true;
-            msgABC.obj.ChangePicture(path);
-          end;
-        end;
-      end);
-      
-      msgABC.taskTimer.Start();
     end;
-    
-    procedure MoveOn(v:V2);
-    begin
-      
-    end;
-    
-    property pos:V2 read getPos write setPos;
   end;
   
-  Player = class(Entity)
-    private
-    
-    public
-    constructor Create(x, y, w, h, hp, speed:integer; pathToSprite:string);
-    begin
-      inherited Create(x, y, w, h, hp, speed);
-      obj := RectangleABC.Create(x - w div 2, y-h div 2, w, h, clRed);
-    end;
-    
-  end;
+  ///Загружает последовательность спрайтов с именем sname и номерами от 0 до count
+  function LoadSprites(sname:string; count:integer):array of string;
   
-  //Класс объекта для взаимодействия с ним
-  Prop = class
-    private
-    positon : V2 := new V2();
-    
-    public
-    obj : ObjectABC;
-    
-    constructor Create();
-    begin
-      
-    end;
+implementation
+function LoadSprites(sname:string; count:integer):array of string;
+begin
+  Result := new string[count];
+  for var i:= 0 to count-1 do begin
+    Result[i] := 'img/'+sname+(i+1)+'.png';
   end;
+end;
 end.
