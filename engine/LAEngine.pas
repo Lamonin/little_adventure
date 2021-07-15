@@ -27,16 +27,16 @@ type
     //Обновление кадра изображения
     procedure UpdateFrame();
     begin
-      if (frameNum<curAnim.frames.Length) then begin
-        ChangeSprite();
-        frameNum+=1;
-      end
-      else begin
-        if not (curAnim.isLoop) then
-          PlayAnim(defaultAnim)
+      if (frameNum<curAnim.frames.Length) then
+        frameNum+=1
+      else
+        if not (curAnim.isLoop) then begin
+          PlayAnim(defaultAnim);
+          exit;
+        end
         else
           frameNum:=0;
-      end;
+      ChangeSprite();
     end;
     
     public
@@ -81,10 +81,44 @@ type
     end;
   end;
   
-  ///Загружает последовательность спрайтов с именем sname и номерами от 0 до count
+  ///Загружает спрайт с именем sname.
+  function LoadSprites(sname:string):array of string;
+  ///Загружает последовательность спрайтов с именем sname и номерами от 0 до count.
   function LoadSprites(sname:string; count:integer):array of string;
   
+  ///Класс игрока в "мире".
+  PlayerWorld = class
+    private
+    sprite:LSprite;
+    public
+    constructor Create(x,y:integer);
+    begin
+      //Инициализация изображений
+      sprite := new LSprite(100, 100, 'idledown', LoadSprites('player/down2'), 100, false);
+      sprite.AddAnim('walkleft', LoadSprites('player/left', 4), 160, true);
+      sprite.AddAnim('walkright', LoadSprites('player/right', 4), 160, true);
+      sprite.AddAnim('walkup', LoadSprites('player/up', 4), 160, true);
+      sprite.AddAnim('walkdown', LoadSprites('player/down', 4), 160, true);
+      
+      sprite.PlayAnim('idledown');
+      //*************************
+    end;
+    
+    procedure Finalize(); override;
+    begin
+      
+    end;
+  end;
+  
+  
+  
 implementation
+function LoadSprites(sname:string):array of string;
+begin
+  Result := new string[1];
+  Result[0] := 'img/'+sname+'.png';
+end;
+
 function LoadSprites(sname:string; count:integer):array of string;
 begin
   Result := new string[count];

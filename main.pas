@@ -11,8 +11,8 @@ begin
 end;
 
 begin
-  var p := new LSprite(100, 100, 'idle', LoadSprites('pig_idle_', 11), 100, true);
-  p.PlayAnim('idle');
+  
+  
   
   OnDrawFrame := OnDraw;
   OnKeyDown := KeyDown;
