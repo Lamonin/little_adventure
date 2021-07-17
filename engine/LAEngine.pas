@@ -11,6 +11,7 @@ type
     private
     anims:Dictionary<string, spriteInfo>; //Все анимации по их именам
     defaultAnim:string; //Имя стандартной анимации
+    curAnimName:string;
     curAnim:spriteInfo; //Текущая анимация
     sprite, tsprite:PictureWPF;
     position:Point;
@@ -32,7 +33,7 @@ type
         frameNum+=1
       else
         if not (curAnim.isLoop) then begin
-          PlayAnim(defaultAnim);
+          //PlayAnim(defaultAnim);
           exit;
         end
         else frameNum:=0;
@@ -77,7 +78,7 @@ type
     
     procedure PlayAnim(aname:string);
     begin
-      
+      curAnimName := aname;
       curAnim := anims[aname];
       if (updater <> nil) then updater.Stop();
       frameNum := 0;
@@ -91,6 +92,7 @@ type
     
     ///Устанавливает позицию спрайта
     property Pos: Point write SetPos;
+    property CurrentAnim: string read curAnimName;
   end;
   
   ///Загружает спрайт с именем sname.
@@ -131,10 +133,10 @@ type
       sprite.AddAnim('idleright', LoadSprite('player/right1'), 160, true);
       sprite.AddAnim('idleup', LoadSprite('player/up2'), 160, true);
       
-      sprite.AddAnim('walkleft', LoadSprites('player/left', 4), 160, true);
-      sprite.AddAnim('walkright', LoadSprites('player/right', 4), 160, true);
-      sprite.AddAnim('walkup', LoadSprites('player/up', 4), 160, true);
-      sprite.AddAnim('walkdown', LoadSprites('player/down', 4), 160, true);
+      sprite.AddAnim('walkleft', LoadSprites('player/left', 5), 120, false);
+      sprite.AddAnim('walkright', LoadSprites('player/right', 5), 120, false);
+      sprite.AddAnim('walkup', LoadSprites('player/up', 4), 120, false);
+      sprite.AddAnim('walkdown', LoadSprites('player/down', 4), 120, false);
       
       sprite.PlayAnim('idledown');
       //*************************
@@ -152,18 +154,19 @@ type
       if (moveTimer<>nil) and (moveTimer.Enabled) then exit;
       if (idleTimer<>nil) then idleTimer.Stop();
       //Обрабатываем "поворот" игрока, включая соответствующую анимацию
-      sprite.PlayAnim('walk'+dir);
+      //if (sprite.CurrentAnim <> 'walk'+dir) then
+        sprite.PlayAnim('walk'+dir);
       position.x := x; position.y := y;
-      point.AnimMoveTo(x*48, y*48, 0.5);
+      point.AnimMoveTo(x*48, y*48, 0.58);
       //Таймер нужен чтобы игрок не двигался с бесконечным ускорением
-      moveTimer := new Timer(480, procedure()->
+      moveTimer := new Timer(560, procedure()->
       begin
-        idleTimer := new Timer(100, procedure()-> 
-        begin
-          sprite.PlayAnim('idle'+dir);
-          idleTimer.Stop();
-        end);
-        idleTimer.Start();
+//        idleTimer := new Timer(80, procedure()-> 
+//        begin
+//          sprite.PlayAnim('idle'+dir);
+//          idleTimer.Stop();
+//        end);
+//        idleTimer.Start();
         moveTimer.Stop();
       end);
       moveTimer.Start();
