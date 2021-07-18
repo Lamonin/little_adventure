@@ -2,30 +2,44 @@
 uses GraphWPF, WPFObjects;
 uses LAEngine in 'engine/LAEngine.pas';
 
-var player:PlayerWorld;
+var gData:gameInfo;
 
 //Процедура вызывается каждый раз при отрисовке
 procedure OnDraw(dt:real);
 begin
+  gData.transPic.ToFront();
 end;
 
 //Обработка ввода пользователя
 procedure KeyDown(k: Key);
 begin
+  if (gData.transPic.CanHide) and (k = Key.Space) then gData.transPic.Hide(gData.player);
+  if (gData.player = nil) or (gData.player.isBlocked) then exit;
+  if (k = key.E) then begin
+    var l := gData.levelGrid[gData.player.GetY,gData.player.GetX].GridObject;
+    if (l<>nil) and (l.objType = 'nextLevel') then begin
+      ChangeLevel(gData, l.NextLevelName);
+      exit;
+    end;
+    gData.player.UseGrid(gData.levelGrid);
+  end;
   if (k = Key.W) or (k = key.Up) then
-    player.MoveOn(player.GetX,player.GetY-1, 'up')
+    gData.player.MoveOn(0, -1, 'up', gData.levelGrid)
   else if (k = Key.S) or (k = key.Down) then
-    player.MoveOn(player.GetX,player.GetY+1, 'down')
+    gData.player.MoveOn(0, 1, 'down', gData.levelGrid)
   else if (k = Key.A) or (k = key.Left) then
-    player.MoveOn(player.GetX-1,player.GetY, 'left')
+    gData.player.MoveOn(-1, 0, 'left', gData.levelGrid)
   else if (k = Key.D) or (k = key.Right) then
-    player.MoveOn(player.GetX+1,player.GetY, 'right')
+    gData.player.MoveOn(1, 0, 'right', gData.levelGrid)
 end;
 
 begin
-  
-  player := new PlayerWorld(0, 0);
-  
+  PrepareWindow();
+  gData.transPic := new TransitionPic();
+  var loader := new LALoader('data/userdata.json');
+  LoadLevel(gData, loader.GetValue&<string>('$.current_level'));
+  //player := new PlayerWorld(8, 4);
+
   OnDrawFrame += OnDraw;
   OnKeyDown := KeyDown;
 end.

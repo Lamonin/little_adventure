@@ -1,17 +1,29 @@
 ﻿unit LAEngine;
+{$reference Newtonsoft.Json.dll}
+uses Newtonsoft.Json.Linq;
 uses GraphWPF, WPFObjects, Timers;
+
+///Применение начальных настроек окна игры
+procedure PrepareWindow();
+begin
+  Window.Caption := 'Little Adventure';
+  Window.IsFixedSize := True;
+  Window.Height := 768;
+  Window.Width := 1296;
+  Window.CenterOnScreen();
+end;
+
 type
+  //##############-НАЧАЛО_СПРАЙТЫ-################
   spriteInfo=record
     frames:array of string; //Кадры анимации
     speed:integer; //Скорость анимации
     isLoop:boolean; //Зациклена ли анимация
     end;
-    
   LSprite = class
     private
     anims:Dictionary<string, spriteInfo>; //Все анимации по их именам
     defaultAnim:string; //Имя стандартной анимации
-    curAnimName:string;
     curAnim:spriteInfo; //Текущая анимация
     sprite, tsprite:PictureWPF;
     position:Point;
@@ -29,20 +41,15 @@ type
     //Обновление кадра изображения
     procedure UpdateFrame();
     begin
-      if (frameNum<curAnim.frames.Length-1) then
-        frameNum+=1
-      else
-        if not (curAnim.isLoop) then begin
-          //PlayAnim(defaultAnim);
-          exit;
-        end
-        else frameNum:=0;
-        
+      if (frameNum<curAnim.frames.Length-1) then frameNum+=1
+      else if curAnim.isLoop then frameNum:=0
+      else begin updater.Stop(); exit; end;
       ChangeSprite();
     end;
     
     procedure SetPos(pos:Point);
     begin
+      pos.Y -= 24;//Смещаем спрайт вверх, чтобы ногами был по центру тайла
       sprite.MoveTo(pos.X, pos.Y);
       position := pos;
     end;
@@ -76,9 +83,9 @@ type
       anims.Add(aname, frame);
     end;
     
+    ///Проигрывает анимацию с именем aname
     procedure PlayAnim(aname:string);
     begin
-      curAnimName := aname;
       curAnim := anims[aname];
       if (updater <> nil) then updater.Stop();
       frameNum := 0;
@@ -86,13 +93,19 @@ type
         updater := new Timer(curAnim.speed, UpdateFrame);
         updater.Start();
       end;
-      
       ChangeSprite();
+    end;
+    
+    ///Уничтожаем спрайт.
+    procedure Destroy();
+    begin
+      sprite.Destroy();
+      sprite := nil;
+      updater.Stop();
     end;
     
     ///Устанавливает позицию спрайта
     property Pos: Point write SetPos;
-    property CurrentAnim: string read curAnimName;
   end;
   
   ///Загружает спрайт с именем sname.
@@ -110,74 +123,360 @@ type
       Result[i] := 'img/'+sname+(i+1)+'.png';
     end;
   end;
+  //##############-КОНЕЦ_СПРАЙТЫ-################
   
   type
+  delegate = procedure();
+  UseObject = class
+    private
+    typeObject:string;
+    dialogBanner:RectangleWPF;
+    messages:array of string;
+    messageNum:integer;
+    levelName:string;
+    
+    public
+    procedure CreateNextLevel(levelName:string);
+    begin
+      typeObject := 'nextLevel';
+      self.levelName := levelName;
+    end;
+    
+    procedure NextLevel();
+    begin
+    end;
+
+    procedure CreateMessage(messages:array of string);
+    begin
+      typeObject := 'message';
+      self.messages := messages;
+      dialogBanner := new RectangleWPF(0,768-128,1296, 128, Colors.Blue);
+      dialogBanner.FontSize := 24;
+      dialogBanner.FontColor := Colors.Yellow;
+      dialogBanner.Visible := false;
+    end;
+    function NextMessage():boolean;
+    begin
+      if dialogBanner.Visible then begin
+        messageNum += 1;
+      end
+      else begin
+        messageNum := 0;
+        dialogBanner.Visible := true;
+      end;
+      
+      if (messageNum = messages.Length) then begin
+        dialogBanner.Visible := false;
+        messageNum := 0; //Надо сбросить это значение
+        Result := False;
+        exit;
+      end;
+      
+      dialogBanner.Text := messages[messageNum];
+      Result := True;
+    end;
+    
+    ///Возвращает название уровня на который ведет этот объект
+    property objType: string read typeObject;
+    property NextLevelName: string read levelName;
+  end;  
+  
+  levelGridRecord = record
+    CantGet:boolean; //Можно ли ступить на клетку
+    CanUse:boolean; //Можно ли взаимодействовать
+    GridObject:UseObject; //Объект на клетке
+  end;
+  levelGridArr = array[0..15, 0..26] of levelGridRecord;
+  
   ///Класс игрока в "мире".
   PlayerWorld = class
     private
-    point:RectangleWPF;
+    point, useRect:RectangleWPF; //Невидимое тело объекта
     position:record x,y:integer end;
     sprite:LSprite;
-    moveTimer, idleTimer:Timer;
+    moveTimer, updateSprite:Timer;
+    dir:string;
+    isUsing:boolean;
     
     public
+    isBlocked:boolean; //Заблокировано ли управление игроком
     constructor Create(x,y:integer);
     begin
       position.x := x; position.y := y;
-      point := new RectangleWPF(x*48, y*48, 4,4,Colors.Black);
+      point := new RectangleWPF(x*48, y*48, 4, 4, Colors.Black);
       point.Visible := false;
+      useRect := new RectangleWPF(x*48+12, y*48, 24, 24, Colors.Blue);
+      useRect.TextAlignment := Alignment.Center;
+      useRect.FontColor := Colors.Yellow;
+      useRect.FontSize := 18;
+      useRect.Text := 'E';
+      useRect.Visible := false;
       
       //Инициализация изображений игрока
       sprite := new LSprite(x, y, 'idledown', LoadSprite('player/down2'), 160, false);
-      sprite.AddAnim('idleleft', LoadSprite('player/left3'), 160, true);
-      sprite.AddAnim('idleright', LoadSprite('player/right1'), 160, true);
-      sprite.AddAnim('idleup', LoadSprite('player/up2'), 160, true);
       
-      sprite.AddAnim('walkleft', LoadSprites('player/left', 5), 120, false);
-      sprite.AddAnim('walkright', LoadSprites('player/right', 5), 120, false);
-      sprite.AddAnim('walkup', LoadSprites('player/up', 4), 120, false);
-      sprite.AddAnim('walkdown', LoadSprites('player/down', 4), 120, false);
+      sprite.AddAnim('rotateleft', LoadSprite('player/left4'), 100, false);
+      sprite.AddAnim('rotateright', LoadSprite('player/right4'), 100, false);
+      sprite.AddAnim('rotateup', LoadSprite('player/up2'), 100, false);
+      sprite.AddAnim('rotatedown', LoadSprite('player/down2'), 100, false);
+      
+      sprite.AddAnim('walkleft', LoadSprites('player/left', 4), 160, false);
+      sprite.AddAnim('walkright', LoadSprites('player/right', 4), 160, false);
+      sprite.AddAnim('walkup', LoadSprites('player/up', 4), 160, false);
+      sprite.AddAnim('walkdown', LoadSprites('player/down', 4), 160, false);
       
       sprite.PlayAnim('idledown');
       //*************************
       
-      //Обновляем покадрово позицию визуального представления игрока
-      OnDrawFrame += procedure(dt:real) -> begin
+      //Обновляем позицию визуального представления игрока
+      updateSprite := new Timer(10,procedure() -> begin
         sprite.Pos := point.LeftTop;
+        useRect.MoveTo(point.LeftTop.x+12, point.LeftTop.y-48);
+      end);
+      updateSprite.Start();
+    end;
+    
+    procedure SetPos(x,y:integer);
+    begin
+      writeln('wtf!');
+      position.x := x; position.y := y;
+      point.AnimMoveTo(x*48,y*48, 0.2);
+      sprite.PlayAnim('idledown');
+    end;
+    
+    procedure MoveOn(x,y:integer; dir:string; var gridData:levelGridArr);
+    begin
+      if isUsing then exit;
+      self.dir := dir;
+      //Не обрабатываем движение, если персонаж уже идёт
+      if (moveTimer<>nil) and (moveTimer.Enabled) then exit;
+      
+      //Проверяем возможность "хода", в случае отсутствия просто "поворачиваем"
+      //персонажа в нужную сторону.
+      if (GetX+x<0) or (GetX+x>26) or (GetY+y<0) or (GetY+y>15) or gridData[GetY+y, GetX+x].CantGet then 
+      begin
+        sprite.PlayAnim('rotate'+dir);
+      end
+      else begin
+        //Обрабатываем "поворот" и движение игрока, включая соответствующую анимацию
+        sprite.PlayAnim('walk'+dir);
+        position.x += x; position.y += y;
+        point.AnimMoveTo(GetX*48, GetY*48, 0.64);
+        
+        //Таймер нужен чтобы игрок не двигался с бесконечным ускорением
+        moveTimer := new Timer(640, procedure()->
+        begin
+          moveTimer.Stop();
+        end);
+        moveTimer.Start();
+      end;
+      var dx := 0; var dy := 0;
+      case self.dir of 
+        'left': dx := -1;
+        'right': dx := 1;
+        'up': dy := -1;
+        'down': dy := 1;
+      end;
+      //Так как это граница экрана, то проверяем точку перехода на след. уровень.
+      if (GetX+dx<0) or (GetX+dx>26) or (GetY+dy<0) or (GetY+dy>15) then 
+      begin
+        useRect.Visible := gridData[GetY, GetX].CanUse;
+        //Можно взаимодействовать - значит это точка перехода
+        exit; 
+      end;
+      if (gridData[GetY+dy, GetX+dx].GridObject <> nil) and (gridData[GetY+dy, GetX+dx].GridObject.typeObject = 'nextLevel') then exit;
+      useRect.Visible := gridData[GetY+dy, GetX+dx].CanUse;
+    end;
+    
+    procedure UseGrid(const gridData:levelGridArr);
+    begin
+      var dx := 0; var dy := 0;
+      case self.dir of 
+        'left': dx := -1;
+        'right': dx := 1;
+        'up': dy := -1;
+        'down': dy := 1;
+      end;
+      if (GetX+dx<0) or (GetX+dx>26) or (GetY+dy<0) or (GetY+dy>15) then exit;
+      if not gridData[GetY+dy, GetX+dx].CanUse then exit;
+      var obj := gridData[GetY+dy, GetX+dx].GridObject;
+      case obj.typeObject of
+        'message': begin
+          isUsing := obj.NextMessage();
+        end;
       end;
     end;
     
-    procedure MoveOn(x,y:integer; dir:string);
+    ///Уничтожаем объект игрока.
+    procedure Destroy();
     begin
-      writeln(Objects.Count);
-      //Не обрабатываем движение, если персонаж уже идёт
-      if (moveTimer<>nil) and (moveTimer.Enabled) then exit;
-      if (idleTimer<>nil) then idleTimer.Stop();
-      //Обрабатываем "поворот" игрока, включая соответствующую анимацию
-      //if (sprite.CurrentAnim <> 'walk'+dir) then
-        sprite.PlayAnim('walk'+dir);
-      position.x := x; position.y := y;
-      point.AnimMoveTo(x*48, y*48, 0.58);
-      //Таймер нужен чтобы игрок не двигался с бесконечным ускорением
-      moveTimer := new Timer(560, procedure()->
-      begin
-//        idleTimer := new Timer(80, procedure()-> 
-//        begin
-//          sprite.PlayAnim('idle'+dir);
-//          idleTimer.Stop();
-//        end);
-//        idleTimer.Start();
-        moveTimer.Stop();
-      end);
-      moveTimer.Start();
-    end;
-    
-    procedure Finalize(); override;
-    begin
-      
+      moveTimer.Stop();
+      updateSprite.Stop();
+      point.Destroy();
+      useRect.Destroy();
+      sprite.Destroy();
     end;
     
     property GetX: integer read position.x;
     property GetY: integer read position.y;
+  end;
+  
+  ///Получение и изменение значений в файле JSON формата.
+  LALoader = class
+    private
+    jObj:JObject; //Хранит весь наш файл для дальнейшней работы с ним
+    path:string;
+    
+    public
+    
+    ///Говорим "обрабатывать" файл с JSON структурой по пути path
+    constructor Create(path:string);
+    begin
+      //Считываем текст из файла
+      self.path := path;
+      var input := ReadAllText(path, Encoding.UTF8);
+      //Преобразуем в структуру JSON.NET библиотеки
+      jObj := JObject.Parse(input);
+    end;
+    
+    ///Получаем значение по пути ключей. Где TL - необходимо указать тип значения.
+    ///'$.' - в начале пути приписывать ОБЯЗАТЕЛЬНО!
+    ///Например: GetValue&<integer>('$.enemy.zombie.hp'); //знак & - тоже обязателен.
+    function GetValue<TL>(key:String):TL;
+    begin
+      var token := jObj.SelectToken(key);
+      if (token = nil) then writeln('Такого ключа не существует!')
+      else Result := token.ToObject&<TL>();
+    end;
+    
+    ///Устанавливает значение val по пути key в файле json,
+    ///если такой путь существует!
+    ///Например: SetValue('$.enemy.zombie.hp', 100);
+    procedure SetValue<TL>(key:string; val:TL);
+    begin
+      var v := JToken.FromObject(val as Object);
+      var token := jObj.SelectToken(key);
+      if (token = nil) then writeln('Такого ключа ', key, ' не существует!')
+      else token.Replace(v);
+    end;
+    
+    ///Сохраняет изменения в файле
+    procedure SaveFile();
+    begin
+      WriteAllText(path,jObj.ToString(), Encoding.UTF8);
+    end;
+  end;
+  
+  TransitionPic = class
+    private
+    pic:RectangleWPF;
+    isCanHide:boolean;
+    public
+    constructor Create();
+    begin
+      pic := new RectangleWPF(0, 0, 1296, 768, Colors.Black);
+      pic.FontColor := Colors.White;
+      pic.FontSize := 24;
+      pic.TextAlignment := Alignment.Center;
+      pic.Visible := false;
+    end;
+    
+    ///Показать изображение перехода
+    procedure Show(var player:PlayerWorld);
+    begin
+      player.isBlocked := true; //Блокируем движение игрока
+      pic.Visible := true;
+      pic.Text := 'Загрузка уровня...';
+      var t:Timer;
+      t := new Timer(2000, procedure() -> begin
+        isCanHide := true;
+        pic.Text := 'Для продолжения нажмите SPACE';
+        t.Stop();
+      end);
+      t.Start();
+    end;
+    
+    ///Скрыть изображение перехода
+    procedure Hide(var player:PlayerWorld);
+    begin
+      player.isBlocked := false; //Разблокируем движение игрока
+      isCanHide := false;
+      pic.Visible := false;
+    end;
+    
+    procedure ToFront();
+    begin
+      pic.ToFront();
+    end;
+    
+    property CanHide:boolean read isCanHide;
+  end;
+  
+  ///Данные игры
+  gameInfo = record
+    player:PlayerWorld;
+    levelGrid:levelGridArr;
+    levelPicture:PictureWPF;
+    transPic:TransitionPic; //Экран на время перехода между уровнями
+  end;
+  
+  ///Загружает уровень с именем lname и настраивает сетку grid.
+  procedure LoadLevel(var gameData:gameInfo; lname:string);
+  begin
+    var loader := new LALoader('data/levels/LALevels.ldtk');
+    //Устанавливаем изображение уровня
+    gameData.levelPicture := new PictureWPF(0, 0,'data/levels/LALevels/png/'+lname+'.png');
+    var i := -1;
+    //Находим номер уровня в массиве
+    for i := 0 to loader.GetValue&<JToken>('$.levels').Count()-1 do begin
+      if loader.GetValue&<string>('$.levels['+i+'].identifier') = lname then break;
+    end;
+    
+    var val := loader.GetValue&<JToken>('$.levels['+i+'].layerInstances[0].entityInstances');
+    var x,y:integer;
+    for var j:=0 to val.Count()-1 do begin
+      x := Integer(val[j]['__grid'][0]);
+      y := Integer(val[j]['__grid'][1]);
+      case val[j]['__identifier'].ToString() of
+        'Wall': begin
+          gameData.levelGrid[y,x].CantGet := true;
+        end;
+        'SpawnPoint': begin
+          if (gameData.player = nil) then
+            gameData.player := new PlayerWorld(x,y)
+          else
+            gameData.player.SetPos(x,y);
+        end;
+        'MessageObject': begin
+          //Можно ли "наступить" на объект взаимодействия
+          var vval := val[j]['fieldInstances'];
+          if (vval[1]['__value'].ToString() = 'False') then
+            gameData.levelGrid[y,x].CantGet := true;
+          gameData.levelGrid[y,x].CanUse := true;
+          gameData.levelGrid[y,x].GridObject := new UseObject();
+          gameData.levelGrid[y,x].GridObject.CreateMessage(vval[0]['__value'].ToObject&<array of string>());
+        end;
+        'NextLevel': begin
+          gameData.levelGrid[y,x].CanUse := true;
+          gameData.levelGrid[y,x].GridObject := new UseObject();
+          var tt := val[j]['fieldInstances'][0]['__value'].ToString();
+          gameData.levelGrid[y,x].GridObject.CreateNextLevel(tt);
+        end;
+      end;
+    end;
+  end;
+  
+  procedure CloseLevel(var gData:gameInfo);
+  begin
+    gData.transPic.Show(gData.player); //Включаем экран перехода
+    gData.levelPicture.Destroy(); //Уничтожаем старое изображение уровня
+    var t : levelGridArr; //
+    gData.levelGrid := t; // Обнуляем таким образом сетку уровня
+  end;
+  
+  procedure ChangeLevel(var gData:gameInfo; lname:string);
+  begin
+    CloseLevel(gData);
+    LoadLevel(gData, lname);
   end;
 end.
