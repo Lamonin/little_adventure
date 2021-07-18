@@ -133,17 +133,15 @@ type
     dialogBanner:RectangleWPF;
     messages:array of string;
     messageNum:integer;
+    messageCount:integer;
     levelName:string;
+    messageTimer:Timer;
     
     public
     procedure CreateNextLevel(levelName:string);
     begin
       typeObject := 'nextLevel';
       self.levelName := levelName;
-    end;
-    
-    procedure NextLevel();
-    begin
     end;
 
     procedure CreateMessage(messages:array of string);
@@ -155,8 +153,21 @@ type
       dialogBanner.FontColor := Colors.Yellow;
       dialogBanner.Visible := false;
     end;
+    
+    procedure NextChar();
+    begin
+      
+    end;
+    
     function NextMessage():boolean;
     begin
+      if (messageTimer<>nil) and (messageTimer.Enabled) then
+      begin
+        messageTimer.Stop();
+        dialogBanner.Text := messages[messageNum];
+        exit;
+      end;
+      
       if dialogBanner.Visible then begin
         messageNum += 1;
       end
@@ -171,8 +182,15 @@ type
         Result := False;
         exit;
       end;
-      
-      dialogBanner.Text := messages[messageNum];
+      messageCount := 1;
+      dialogBanner.Text := '';
+      messageTimer := new Timer(32, procedure() -> begin
+        dialogBanner.Text += messages[messageNum][messageCount];
+        if (messageCount = messages[messageNum].Length) then
+          messageTimer.Stop();
+        messageCount += 1;
+      end);
+      messageTimer.Start();
       Result := True;
     end;
     
@@ -236,9 +254,9 @@ type
       updateSprite.Start();
     end;
     
+    ///Перемещает игрока в координаты x, y
     procedure SetPos(x,y:integer);
     begin
-      writeln('wtf!');
       position.x := x; position.y := y;
       point.AnimMoveTo(x*48,y*48, 0.2);
       sprite.PlayAnim('idledown');
@@ -378,13 +396,14 @@ type
       pic.FontColor := Colors.White;
       pic.FontSize := 24;
       pic.TextAlignment := Alignment.Center;
-      pic.Visible := false;
+      //pic.Visible := false;
     end;
     
     ///Показать изображение перехода
     procedure Show(var player:PlayerWorld);
     begin
-      player.isBlocked := true; //Блокируем движение игрока
+      if (player <> nil) then
+        player.isBlocked := true; //Блокируем движение игрока
       pic.Visible := true;
       pic.Text := 'Загрузка уровня...';
       var t:Timer;
@@ -468,7 +487,9 @@ type
   
   procedure CloseLevel(var gData:gameInfo);
   begin
+    
     gData.transPic.Show(gData.player); //Включаем экран перехода
+    if (gData.levelPicture = nil) then exit;
     gData.levelPicture.Destroy(); //Уничтожаем старое изображение уровня
     var t : levelGridArr; //
     gData.levelGrid := t; // Обнуляем таким образом сетку уровня

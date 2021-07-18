@@ -36,9 +36,12 @@ end;
 begin
   PrepareWindow();
   gData.transPic := new TransitionPic();
+  
+  ///Загружаем "прогресс" игрока
   var loader := new LALoader('data/userdata.json');
-  LoadLevel(gData, loader.GetValue&<string>('$.current_level'));
-  //player := new PlayerWorld(8, 4);
+  ChangeLevel(gData, loader.GetValue&<string>('$.current_level'));
+  //LoadLevel(gData, loader.GetValue&<string>('$.current_level'));
+  
 
   OnDrawFrame += OnDraw;
   OnKeyDown := KeyDown;
