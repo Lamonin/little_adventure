@@ -192,7 +192,6 @@ type
   //##############-КОНЕЦ_СПРАЙТЫ-################
   
   type
-  delegate = procedure();
   UseObject = class
     private
     typeObject:string;
@@ -202,8 +201,15 @@ type
     messageCount:integer;
     levelName:string;
     messageTimer:Timer;
+    EnemyPoint:array of string;
     
     public
+    procedure CreateEnemyPoint(ArrayEnemt: array of string);
+    begin
+      typeObject := 'EnemyPoint';
+      EnemyPoint := ArrayEnemt;
+    end;
+    
     procedure CreateNextLevel(levelName:string);
     begin
       typeObject := 'nextLevel';
@@ -270,7 +276,7 @@ type
     CanUse:boolean; //Можно ли взаимодействовать
     GridObject:UseObject; //Объект на клетке
   end;
-  levelGridArr = array[0..15, 0..26] of levelGridRecord;
+  levelGridArr = array[0..16, 0..26] of levelGridRecord;
   
   ///Класс игрока в "мире".
   PlayerWorld = class
@@ -324,7 +330,7 @@ type
     procedure SetPos(x,y:integer);
     begin
       position.x := x; position.y := y;
-      point.AnimMoveTo(x*48,y*48, 0.2);
+      point.AnimMoveTo(x*48,y*48, 0.1);
       sprite.PlayAnim('idledown');
     end;
     
@@ -370,8 +376,8 @@ type
       end;
       if (gridData[GetY+dy, GetX+dx].GridObject <> nil) and (gridData[GetY+dy, GetX+dx].GridObject.typeObject = 'nextLevel') then exit;
       useRect.Visible := gridData[GetY+dy, GetX+dx].CanUse;
-    end;
-    
+      end;
+      
     procedure UseGrid(const gridData:levelGridArr);
     begin
       var dx := 0; var dy := 0;
@@ -473,7 +479,7 @@ type
       pic.Visible := true;
       pic.Text := 'Загрузка уровня...';
       var t:Timer;
-      t := new Timer(2000, procedure() -> begin
+      t := new Timer(500, procedure() -> begin
         isCanHide := true;
         pic.Text := 'Для продолжения нажмите SPACE';
         t.Stop();
@@ -501,7 +507,7 @@ type
   gameInfo = record
     player:PlayerWorld;
     levelGrid:levelGridArr;
-    levelPicture:PictureWPF;
+    levelPicture, CombatPicture:PictureWPF;
     transPic:TransitionPic; //Экран на время перехода между уровнями
   end;
   
@@ -547,6 +553,12 @@ type
           var tt := val[j]['fieldInstances'][0]['__value'].ToString();
           gameData.levelGrid[y,x].GridObject.CreateNextLevel(tt);
         end;
+        'EnemyPoint': begin
+          gameData.levelGrid[y,x].GridObject := new UseObject();
+          var tt:= val[j]['fieldInstances'][0]['__value'].ToObject&<array of string>();
+          gameData.levelGrid[y,x].GridObject.CreateEnemyPoint(tt);
+          writeln(tt);
+        end;
       end;
     end;
   end;
@@ -570,4 +582,12 @@ type
   begin
     
   end;
+  
+  procedure CombatField(var gData:gameInfo);
+  begin
+    gData.player.isBlocked := true;
+    gData.CombatPicture := new PictureWPF(0, 0,'data\levels\LALevels\png\CombatField.png');
+    gData.player.SetPos(8,16);
+  end;
+  
 end.
