@@ -13,7 +13,67 @@ begin
   Window.CenterOnScreen();
 end;
 
+///Проверяет - принадлежит ли точка прямоугольнику объекта
+function PtInside(x,y:real; obj:ObjectWPF):boolean;
+begin
+  if (x>obj.LeftTop.X) and (x<obj.RightTop.X) and (y>obj.LeftTop.Y) and (y<obj.RightBottom.Y) then
+  Result:=True;
+end;
+
 type
+  
+  //##############-НАЧАЛО_ИНТЕРФЕЙС-################
+  ///Пример использования:
+  ///var b:= new LAButton(100, 200, 'img/ui/play.png', 'img/ui/playpress.png');
+  ///b.OnClick += procedure() -> begin КОД КОТОРЫЙ ВЫПОЛНИТСЯ ПРИ НАЖАТИИ КНОПКИ end;
+  LAButton = class
+    private
+    pic:PictureWPF;
+    idlePic, clickPic:string;
+    
+    ///Изменение спрайта на clickPic
+    procedure Clicked(x, y: real; mousebutton: integer);
+    begin
+      if (mousebutton <> 1) then exit;
+      if PtInside(x,y,pic) then 
+      begin
+        var t := pic;
+        pic := new PictureWPF(t.LeftTop, clickPic);
+        t.Destroy();
+      end;
+    end;
+    
+    ///Обработка нажатия
+    procedure Process(x, y: real; mousebutton: integer);
+    begin
+      var t := pic;
+      pic := new PictureWPF(t.LeftTop, idlePic);
+      t.Destroy();
+      if (mousebutton <> 0) then exit;
+      
+      if (OnClick <> nil) and PtInside(x,y,pic) then begin
+        OnClick();
+        writeln('POPIT');
+      end;
+    end;
+    
+    public
+    event OnClick: procedure; //Событие нажатия на кнопку
+    
+    ///Создаем кнопку с изображением по умолчанию idlePic
+    ///И с изображением по нажатию clickPic.
+    constructor Create(x,y:integer; idlePic, clickPic:string);
+    begin
+      self.idlePic := idlePic;
+      self.clickPic := clickPic;
+      pic := new PictureWPF(x, y, idlePic);
+      OnMouseDown += Clicked;
+      OnMouseUp += Process;
+    end;
+  end;
+  
+  //##############-КОНЕЦ_ИНТЕРФЕЙС-#################
+  
   //##############-НАЧАЛО_СПРАЙТЫ-################
   spriteInfo=record
     frames:array of string; //Кадры анимации

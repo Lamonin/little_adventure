@@ -41,7 +41,6 @@ begin
   var loader := new LALoader('data/userdata.json');
   ChangeLevel(gData, loader.GetValue&<string>('$.current_level'));
   //LoadLevel(gData, loader.GetValue&<string>('$.current_level'));
-  
 
   OnDrawFrame += OnDraw;
   OnKeyDown := KeyDown;
