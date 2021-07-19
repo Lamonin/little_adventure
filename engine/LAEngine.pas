@@ -53,7 +53,6 @@ type
       
       if (OnClick <> nil) and PtInside(x,y,pic) then begin
         OnClick();
-        writeln('POPIT');
       end;
     end;
     
@@ -69,6 +68,13 @@ type
       pic := new PictureWPF(x, y, idlePic);
       OnMouseDown += Clicked;
       OnMouseUp += Process;
+    end;
+    
+    procedure Destroy();
+    begin
+      pic.Destroy();
+      OnMouseDown -= Clicked;
+      OnMouseUp -= Process;
     end;
   end;
   
@@ -547,7 +553,6 @@ type
   
   procedure CloseLevel(var gData:gameInfo);
   begin
-    
     gData.transPic.Show(gData.player); //Включаем экран перехода
     if (gData.levelPicture = nil) then exit;
     gData.levelPicture.Destroy(); //Уничтожаем старое изображение уровня
@@ -559,5 +564,10 @@ type
   begin
     CloseLevel(gData);
     LoadLevel(gData, lname);
+  end;
+  
+  procedure MainMenu();
+  begin
+    
   end;
 end.
