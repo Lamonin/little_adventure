@@ -466,10 +466,12 @@ type
     public
     constructor Create();
     begin
-      pic := new RectangleWPF(0, 0, 1296, 768, Colors.Black);
-      pic.FontColor := Colors.White;
-      pic.FontSize := 24;
-      pic.TextAlignment := Alignment.Center;
+      Redraw(procedure()-> begin
+        pic := new RectangleWPF(0, 0, 1296, 768, Colors.Black);
+        pic.FontColor := Colors.White;
+        pic.FontSize := 24;
+        pic.TextAlignment := Alignment.Center;
+      end);
       //pic.Visible := false;
     end;
     
@@ -530,9 +532,10 @@ type
     for var j:=0 to val.Count()-1 do begin
       x := Integer(val[j]['__grid'][0]);
       y := Integer(val[j]['__grid'][1]);
+      var cell := cell;
       case val[j]['__identifier'].ToString() of
         'Wall': begin
-          gameData.levelGrid[y,x].CantGet := true;
+          cell.CantGet := true;
         end;
         'SpawnPoint': begin
           if (gameData.player = nil) then
@@ -543,28 +546,27 @@ type
         'MessageObject': begin
           //Можно ли "наступить" на объект взаимодействия
           var vval := val[j]['fieldInstances'];
-          if (vval[1]['__value'].ToString() = 'False') then
-            gameData.levelGrid[y,x].CantGet := true;
-          gameData.levelGrid[y,x].CanUse := true;
-          gameData.levelGrid[y,x].GridObject := new UseObject();
-          gameData.levelGrid[y,x].GridObject.CreateMessage(vval[0]['__value'].ToObject&<array of string>());
+          if (vval[1]['__value'].ToString() = 'False') then cell.CantGet := true;
+          cell.CanUse := true;
+          cell.GridObject := new UseObject();
+          cell.GridObject.CreateMessage(vval[0]['__value'].ToObject&<array of string>());
         end;
         'NextLevel': begin
-          gameData.levelGrid[y,x].CanUse := true;
-          gameData.levelGrid[y,x].GridObject := new UseObject();
+          cell.CanUse := true;
+          cell.GridObject := new UseObject();
           var tt := val[j]['fieldInstances'][0]['__value'].ToString();
-          gameData.levelGrid[y,x].GridObject.CreateNextLevel(tt);
+          cell.GridObject.CreateNextLevel(tt);
         end;
         'EnemyPoint': begin
-          gameData.levelGrid[y,x].GridObject := new UseObject();
+          cell.GridObject := new UseObject();
           var tt:= val[j]['fieldInstances'][0]['__value'].ToObject&<array of string>();
-          gameData.levelGrid[y,x].GridObject.CreateEnemyPoint(tt);
-          writeln(tt);
+          cell.GridObject.CreateEnemyPoint(tt);
         end;
       end;
     end;
   end;
   
+  ///Закрывает текущий уровень
   procedure CloseLevel(var gData:gameInfo);
   begin
     gData.transPic.Show(gData.player); //Включаем экран перехода
@@ -574,6 +576,7 @@ type
     gData.levelGrid := t; // Обнуляем таким образом сетку уровня
   end;
   
+  ///Меняет текущий уровень на уровень с именем lname
   procedure ChangeLevel(var gData:gameInfo; lname:string);
   begin
     CloseLevel(gData);
@@ -587,7 +590,7 @@ type
   
   procedure CombatField(var gData:gameInfo);
   begin
-    gData.player.isBlocked := true;
+    gData.player.isBlocked := true; //Блокируем управление игроком
     gData.CombatPicture := new PictureWPF(0, 0,'data\levels\LALevels\png\CombatField.png');
     gData.player.SetPos(8,16);
   end;
