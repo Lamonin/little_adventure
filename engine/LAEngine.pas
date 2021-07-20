@@ -99,9 +99,11 @@ type
     
     procedure ChangeSprite();
     begin
-      tsprite := sprite;
-      sprite:= new PictureWPF(position, curAnim.frames[frameNum]);
-      tsprite.Destroy;
+      Redraw(procedure()-> begin
+        var p := sprite.LeftTop;
+        sprite.Destroy();
+        sprite:= new PictureWPF(p, curAnim.frames[frameNum]);
+      end);
     end;
     
     //Обновление кадра изображения
