@@ -461,8 +461,7 @@
 	], "enums": [{ "identifier": "EnemyType", "uid": 20, "values": [
 		{ "id": "Orc", "tileId": null, "color": 14498619, "__tileSrcRect": null },
 		{ "id": "Skeleton", "tileId": null, "color": 2714831, "__tileSrcRect": null },
-		{ "id": "Zombie", "tileId": null, "color": 14905094, "__tileSrcRect": null },
-		{ "id": "TreeEnemy", "tileId": null, "color": 1834240, "__tileSrcRect": null }
+		{ "id": "Zombie", "tileId": null, "color": 14905094, "__tileSrcRect": null }
 	], "iconTilesetUid": null, "externalRelPath": null, "externalFileChecksum": null }], "externalEnums": [], "levelFields": [] },
 	"levels": [
 		{
@@ -657,18 +656,18 @@
 							"px": [912,192],
 							"fieldInstances": [{
 								"__identifier": "Enemys",
-								"__value": [ "Skeleton", "TreeEnemy", "Skeleton" ],
+								"__value": [ "Orc", "Skeleton", "Zombie" ],
 								"__type": "Array<LocalEnum.EnemyType>",
 								"defUid": 21,
 								"realEditorValues": [ {
 									"id": "V_String",
-									"params": ["Skeleton"]
-								}, {
-									"id": "V_String",
-									"params": ["TreeEnemy"]
+									"params": ["Orc"]
 								}, {
 									"id": "V_String",
 									"params": ["Skeleton"]
+								}, {
+									"id": "V_String",
+									"params": ["Zombie"]
 								} ]
 							}]
 						},
@@ -683,18 +682,15 @@
 							"px": [864,480],
 							"fieldInstances": [{
 								"__identifier": "Enemys",
-								"__value": [ "TreeEnemy", "Skeleton", "TreeEnemy" ],
+								"__value": [ "Skeleton", "Skeleton" ],
 								"__type": "Array<LocalEnum.EnemyType>",
 								"defUid": 21,
 								"realEditorValues": [ {
 									"id": "V_String",
-									"params": ["TreeEnemy"]
-								}, {
-									"id": "V_String",
 									"params": ["Skeleton"]
 								}, {
 									"id": "V_String",
-									"params": ["TreeEnemy"]
+									"params": ["Skeleton"]
 								} ]
 							}]
 						},
@@ -1207,13 +1203,13 @@
 						},
 						{
 							"__identifier": "SpawnPoint",
-							"__grid": [19,7],
+							"__grid": [25,8],
 							"__pivot": [0,0],
 							"__tile": null,
 							"width": 48,
 							"height": 48,
 							"defUid": 23,
-							"px": [912,336],
+							"px": [1200,384],
 							"fieldInstances": []
 						},
 						{

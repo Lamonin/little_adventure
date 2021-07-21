@@ -153,7 +153,7 @@ type
     
     procedure SetPos(pos:Point);
     begin
-      pos.Y -= 24;//Смещаем спрайт вверх, чтобы ногами был по центру тайла
+      pos.Y -= 22;//Смещаем спрайт вверх, чтобы ногами был по центру тайла
       sprite.MoveTo(pos.X, pos.Y);
       position := pos;
     end;
@@ -242,6 +242,7 @@ type
     procedure CreateEnemyPoint(ArrayEnemy: array of string; X,Y: integer);
     procedure CreateNextLevel(levelName:string);
     procedure CreateMessage(messages:array of string);
+    procedure StartBattle();
     function NextMessage():boolean;
     property objType: string read;
     property NextLevelName: string read;
@@ -320,12 +321,30 @@ type
     
     procedure CreateEnemyPoint(ArrayEnemy: array of string; X,Y: integer);
     begin
+      writeln(ArrayEnemy);
       typeObject := 'EnemyPoint';
       EnemyPoint := ArrayEnemy;
       var p : GPoint;
       P.X :=X;
       p.Y :=Y;
       enemyPoints.add(p);
+    end;
+    
+    ///Начало битвы, спавн врагов
+    procedure StartBattle();
+    begin
+      for var i:= 0 to EnemyPoint.Length-1 do begin
+        case EnemyPoint[i] of
+          'Skeleton':begin
+            var s1 := new LSprite((i+1)*4, 5, 'idleDown', LoadSprites('enemy\Skeleton_Seeker\idle', 6), 160, true);
+            s1.PlayAnim('idleDown');
+          end;
+          'TreeEnemy':begin
+            var s1 := new LSprite((i+1)*4, 5, 'idleDown', LoadSprites('enemy\Sprout\idle', 4), 160, true);
+            s1.PlayAnim('idleDown');
+          end;
+        end;
+      end;
     end;
     
     procedure CreateNextLevel(levelName:string);
@@ -381,11 +400,6 @@ type
       Result := True;
     end;
     
-    static function CalculateEnemyPoint():integer;
-    begin
-      
-    end;
-    
     ///Возвращает тип этого объекта
     property objType: string read typeObject;
     ///Возвращает название уровня на который ведет этот объект
@@ -423,9 +437,9 @@ type
       end;
       if (LAGD.Grid[GetY+dy, GetX+dx].GridObject <> nil) and (LAGD.Grid[GetY+dy, GetX+dx].GridObject.objType = 'nextLevel') then exit;
         useRect.Visible := LAGD.Grid[GetY+dy, GetX+dx].CanUse;
-        UseObject.CalculateEnemyPoint();
-        var l := LAGD.Grid[LAGD.player.GetY,LAGD.player.GetX].GridObject;
-        if (l <> nil) and (l.Objtype = 'EnemyPoint') then CombatField();
+      UseObject.CalculateEnemyPoint();
+      var l := LAGD.Grid[LAGD.player.GetY,LAGD.player.GetX].GridObject;
+      if (l <> nil) and (l.Objtype = 'EnemyPoint') then CombatField();
     end;
     
     public
@@ -670,6 +684,7 @@ type
   begin
     LAGD.Player.isBlocked := true; //Блокируем управление игроком
     LAGD.CombatPic := new PictureWPF(0, 0,'data\levels\LALevels\png\CombatField.png');
+    LAGD.Grid[LAGD.Player.GetY,LAGD.Player.GetX].GridObject.StartBattle();
     LAGD.Player.SetPos(8,16);
   end; 
   

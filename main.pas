@@ -37,22 +37,11 @@ begin
   Window.IsFixedSize := True;
   Window.SetSize(1296, 768);
   Window.CenterOnScreen();
-<<<<<<< Updated upstream
   
-=======
-
->>>>>>> Stashed changes
   LAGD.TransPic := new TransitionPic();
   ///Загружаем "прогресс" игрока
   var loader := new LALoader('data/userdata.json');
   ChangeLevel(loader.GetValue&<string>('$.current_level'));
-  var s1 := new LSprite(8, 4, 'idleDown', LoadSprites('enemy\Skeleton_Seeker\idle', 6));
-  var s2 := new LSprite(10, 2, 'idleDown', LoadSprites('enemy\Skeleton_Seeker\idle', 6));
-  var s3 := new LSprite(12, 4, 'idleDown', LoadSprites('enemy\Skeleton_Seeker\idle', 6));
-  var s4 := new LSprite(14, 2, 'idleDown', LoadSprites('enemy\Skeleton_Seeker\idle', 6));
-  var s5 := new LSprite(16, 4, 'idleDown', LoadSprites('enemy\Skeleton_Seeker\idle', 6));
-  
-  //LoadLevel(loader.GetValue&<string>('$.current_level'));
   
   OnDrawFrame += OnDraw;
   OnKeyDown := KeyDown;

@@ -462,7 +462,7 @@
 		{ "id": "Orc", "tileId": null, "color": 14498619, "__tileSrcRect": null },
 		{ "id": "Skeleton", "tileId": null, "color": 2714831, "__tileSrcRect": null },
 		{ "id": "Zombie", "tileId": null, "color": 14905094, "__tileSrcRect": null },
-		{ "id": "TreeEnemy", "tileId": null, "color": 1834240, "__tileSrcRect": null }
+		{ "id": "Null", "tileId": null, "color": 0, "__tileSrcRect": null }
 	], "iconTilesetUid": null, "externalRelPath": null, "externalFileChecksum": null }], "externalEnums": [], "levelFields": [] },
 	"levels": [
 		{
@@ -657,45 +657,57 @@
 							"px": [912,192],
 							"fieldInstances": [{
 								"__identifier": "Enemys",
-								"__value": [ "Skeleton", "TreeEnemy", "Skeleton" ],
+								"__value": [ "Orc", "Skeleton", "Zombie" ],
 								"__type": "Array<LocalEnum.EnemyType>",
 								"defUid": 21,
 								"realEditorValues": [ {
 									"id": "V_String",
-									"params": ["Skeleton"]
-								}, {
-									"id": "V_String",
-									"params": ["TreeEnemy"]
+									"params": ["Orc"]
 								}, {
 									"id": "V_String",
 									"params": ["Skeleton"]
+								}, {
+									"id": "V_String",
+									"params": ["Zombie"]
 								} ]
 							}]
 						},
 						{
 							"__identifier": "EnemyPoint",
-							"__grid": [18,10],
+							"__grid": [19,4],
 							"__pivot": [0,0],
 							"__tile": null,
 							"width": 48,
 							"height": 48,
 							"defUid": 18,
-							"px": [864,480],
+							"px": [912,192],
 							"fieldInstances": [{
 								"__identifier": "Enemys",
-								"__value": [ "TreeEnemy", "Skeleton", "TreeEnemy" ],
+								"__value": [ "Null", "Skeleton", "Null", "Skeleton", "Null" ],
 								"__type": "Array<LocalEnum.EnemyType>",
 								"defUid": 21,
-								"realEditorValues": [ {
-									"id": "V_String",
-									"params": ["TreeEnemy"]
-								}, {
-									"id": "V_String",
-									"params": ["Skeleton"]
-								}, {
-									"id": "V_String",
-									"params": ["TreeEnemy"]
-								} ]
+								"realEditorValues": [
+									{
+										"id": "V_String",
+										"params": ["Null"]
+									},
+									{
+										"id": "V_String",
+										"params": ["Skeleton"]
+									},
+									{
+										"id": "V_String",
+										"params": ["Null"]
+									},
+									{
+										"id": "V_String",
+										"params": ["Skeleton"]
+									},
+									{
+										"id": "V_String",
+										"params": ["Null"]
+									}
+								]
 							}]
 						},
 						{
@@ -1206,25 +1218,14 @@
 							"fieldInstances": []
 						},
 						{
-							"__identifier": "SpawnPoint",
-							"__grid": [19,7],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 23,
-							"px": [912,336],
-							"fieldInstances": []
-						},
-						{
 							"__identifier": "TransitionMessage",
-							"__grid": [26,4],
+							"__grid": [26,5],
 							"__pivot": [0,0],
 							"__tile": null,
 							"width": 48,
 							"height": 48,
 							"defUid": 24,
-							"px": [1248,192],
+							"px": [1248,240],
 							"fieldInstances": [{
 								"__identifier": "Multilines",
 								"__value": "Давным давно, в далекой галактике\nбыли они.\nИ было их много.\nHUILOOO",
@@ -1235,6 +1236,17 @@
 									"params": ["Давным давно, в далекой галактике\nбыли они.\nИ было их много.\nHUILOOO"]
 								}]
 							}]
+						},
+						{
+							"__identifier": "SpawnPoint",
+							"__grid": [25,8],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 23,
+							"px": [1200,384],
+							"fieldInstances": []
 						}
 					]
 				},
@@ -1579,7 +1591,6 @@
 						{ "px": [768,480], "src": [144,0], "f": 0, "t": 3, "d": [286] },
 						{ "px": [816,480], "src": [144,0], "f": 0, "t": 3, "d": [287] },
 						{ "px": [864,480], "src": [144,0], "f": 0, "t": 3, "d": [288] },
-						{ "px": [864,480], "src": [96,672], "f": 0, "t": 268, "d": [288] },
 						{ "px": [912,480], "src": [144,0], "f": 0, "t": 3, "d": [289] },
 						{ "px": [960,480], "src": [144,0], "f": 0, "t": 3, "d": [290] },
 						{ "px": [1008,480], "src": [144,0], "f": 0, "t": 3, "d": [291] },
