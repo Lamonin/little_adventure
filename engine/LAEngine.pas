@@ -381,6 +381,11 @@ type
       Result := True;
     end;
     
+    static function CalculateEnemyPoint():integer;
+    begin
+      
+    end;
+    
     ///Возвращает тип этого объекта
     property objType: string read typeObject;
     ///Возвращает название уровня на который ведет этот объект
@@ -623,6 +628,13 @@ type
           cell.GridObject := new UseObject();
           var tt:= val[j]['fieldInstances'][0]['__value'].ToObject&<array of string>();
           cell.GridObject.CreateEnemyPoint(tt, x, y);
+        end;
+        'TransitionMessage': begin
+          var tt:= val[j]['fieldInstances'][0]['__value'].ToString();
+          var p := new RectangleWPF(100, 100, 400, 100, Colors.Wheat);
+          p.Text := tt;
+          p.FontName := 'Promocyja';
+          p.TextAlignment := Alignment.Center;
         end;
       end;
       LAGD.Grid[y,x] := cell;

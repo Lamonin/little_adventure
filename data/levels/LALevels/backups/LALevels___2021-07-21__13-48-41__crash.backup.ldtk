@@ -673,13 +673,13 @@
 						},
 						{
 							"__identifier": "EnemyPoint",
-							"__grid": [19,11],
+							"__grid": [19,4],
 							"__pivot": [0,0],
 							"__tile": null,
 							"width": 48,
 							"height": 48,
 							"defUid": 18,
-							"px": [912,528],
+							"px": [912,192],
 							"fieldInstances": [{
 								"__identifier": "Enemys",
 								"__value": [ "Zombie", "Orc" ],
@@ -1212,47 +1212,25 @@
 							"px": [1248,240],
 							"fieldInstances": [{
 								"__identifier": "Multilines",
-								"__value": "Давным давно, в далекой галактике\nбыли они.\nИ было их много.\nHUILOOO",
+								"__value": "Давным давно, в далекой галактике\nбыли они.\nИ было их много.",
 								"__type": "String",
 								"defUid": 25,
 								"realEditorValues": [{
 									"id": "V_String",
-									"params": ["Давным давно, в далекой галактике\nбыли они.\nИ было их много.\nHUILOOO"]
+									"params": ["Давным давно, в далекой галактике\nбыли они.\nИ было их много."]
 								}]
 							}]
 						},
 						{
 							"__identifier": "SpawnPoint",
-							"__grid": [19,8],
+							"__grid": [25,8],
 							"__pivot": [0,0],
 							"__tile": null,
 							"width": 48,
 							"height": 48,
 							"defUid": 23,
-							"px": [912,384],
+							"px": [1200,384],
 							"fieldInstances": []
-						},
-						{
-							"__identifier": "EnemyPoint",
-							"__grid": [15,9],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 18,
-							"px": [720,432],
-							"fieldInstances": [{ "__identifier": "Enemys", "__value": [], "__type": "Array<LocalEnum.EnemyType>", "defUid": 21, "realEditorValues": [] }]
-						},
-						{
-							"__identifier": "EnemyPoint",
-							"__grid": [13,14],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 18,
-							"px": [624,672],
-							"fieldInstances": [{ "__identifier": "Enemys", "__value": [], "__type": "Array<LocalEnum.EnemyType>", "defUid": 21, "realEditorValues": [] }]
 						}
 					]
 				},
@@ -1876,6 +1854,17 @@
 					"overrideTilesetUid": null,
 					"gridTiles": [],
 					"entityInstances": [
+						{
+							"__identifier": "SpawnPoint",
+							"__grid": [0,3],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 23,
+							"px": [0,144],
+							"fieldInstances": []
+						},
 						{
 							"__identifier": "Potion",
 							"__grid": [13,2],
