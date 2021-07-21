@@ -657,19 +657,31 @@
 							"px": [912,192],
 							"fieldInstances": [{
 								"__identifier": "Enemys",
-								"__value": [ "Skeleton", "TreeEnemy", "Skeleton" ],
+								"__value": [ "Skeleton", "TreeEnemy", "Skeleton", "TreeEnemy", "Skeleton" ],
 								"__type": "Array<LocalEnum.EnemyType>",
 								"defUid": 21,
-								"realEditorValues": [ {
-									"id": "V_String",
-									"params": ["Skeleton"]
-								}, {
-									"id": "V_String",
-									"params": ["TreeEnemy"]
-								}, {
-									"id": "V_String",
-									"params": ["Skeleton"]
-								} ]
+								"realEditorValues": [
+									{
+										"id": "V_String",
+										"params": ["Skeleton"]
+									},
+									{
+										"id": "V_String",
+										"params": ["TreeEnemy"]
+									},
+									{
+										"id": "V_String",
+										"params": ["Skeleton"]
+									},
+									{
+										"id": "V_String",
+										"params": ["TreeEnemy"]
+									},
+									{
+										"id": "V_String",
+										"params": ["Skeleton"]
+									}
+								]
 							}]
 						},
 						{
@@ -683,15 +695,18 @@
 							"px": [864,480],
 							"fieldInstances": [{
 								"__identifier": "Enemys",
-								"__value": [ "TreeEnemy", "Skeleton", "TreeEnemy" ],
+								"__value": [ "Skeleton", "Skeleton", "TreeEnemy", "TreeEnemy" ],
 								"__type": "Array<LocalEnum.EnemyType>",
 								"defUid": 21,
 								"realEditorValues": [ {
 									"id": "V_String",
-									"params": ["TreeEnemy"]
+									"params": ["Skeleton"]
 								}, {
 									"id": "V_String",
 									"params": ["Skeleton"]
+								}, {
+									"id": "V_String",
+									"params": ["TreeEnemy"]
 								}, {
 									"id": "V_String",
 									"params": ["TreeEnemy"]

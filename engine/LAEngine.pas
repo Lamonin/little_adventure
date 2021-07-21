@@ -333,18 +333,30 @@ type
     ///Начало битвы, спавн врагов
     procedure StartBattle();
     begin
-      for var i:= 0 to EnemyPoint.Length-1 do begin
-        case EnemyPoint[i] of
-          'Skeleton':begin
-            var s1 := new LSprite((i+1)*4, 5, 'idleDown', LoadSprites('enemy\Skeleton_Seeker\idle', 6), 160, true);
-            s1.PlayAnim('idleDown');
+      for var i:= 0 to EnemyPoint.Length-1 do
+       begin
+        case (i+1) of
+           1: CreateEnemy(i, 12, 4);
+           2: CreateEnemy(i, 15, 2);
+           3: CreateEnemy(i, 9, 2);
+           4: CreateEnemy(i, 6, 4);
+           5: CreateEnemy(i, 18, 4);
           end;
-          'TreeEnemy':begin
-            var s1 := new LSprite((i+1)*4, 5, 'idleDown', LoadSprites('enemy\Sprout\idle', 4), 160, true);
-            s1.PlayAnim('idleDown');
-          end;
-        end;
       end;
+    end;
+    
+    procedure CreateEnemy(Index:integer; X,Y:integer);
+    begin
+      case EnemyPoint[Index] of
+                'Skeleton':begin
+                  var s1 := new LSprite(X, Y, 'idleDown', LoadSprites('enemy\Skeleton_Seeker\idle', 6), 160, true);
+                  s1.PlayAnim('idleDown');
+                end;
+                'TreeEnemy':begin
+                  var s1 := new LSprite(X, Y, 'idleDown', LoadSprites('enemy\Sprout\idle', 4), 160, true);
+                  s1.PlayAnim('idleDown');
+                end;
+              end;
     end;
     
     procedure CreateNextLevel(levelName:string);
@@ -680,12 +692,26 @@ type
     
   end;
   
+  procedure Escape(X,Y:integer);
+  begin   
+       LAGD.Player.SetPos(X,Y);
+       LAGD.Player.isBlocked:= false;
+  end;
+  
   procedure CombatField();
+  var
+    X,Y: integer;
   begin
+    X:= LAGD.Player.GetX;
+    Y:= LAGD.Player.GetY-1;
     LAGD.Player.isBlocked := true; //Блокируем управление игроком
     LAGD.CombatPic := new PictureWPF(0, 0,'data\levels\LALevels\png\CombatField.png');
     LAGD.Grid[LAGD.Player.GetY,LAGD.Player.GetX].GridObject.StartBattle();
     LAGD.Player.SetPos(8,16);
+     var b:= new LAButton(12*48, 10*48, 'img/ui/play.png', 'img/ui/playpress.png');
+     b.OnClick += procedure() -> begin 
+       Escape(X,Y);
+     end;
   end; 
   
 end.
