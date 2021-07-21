@@ -2,45 +2,46 @@
 uses GraphWPF, WPFObjects;
 uses LAEngine in 'engine/LAEngine.pas';
 
-var gData:gameInfo;
-
 //Процедура вызывается каждый раз при отрисовке
 procedure OnDraw(dt:real);
 begin
-  gData.transPic.ToFront();
+  LAGD.TransPic.ToFront();
 end;
 
 //Обработка ввода пользователя
 procedure KeyDown(k: Key);
 begin
-  if (gData.transPic.CanHide) and (k = Key.Space) then gData.transPic.Hide(gData.player);
-  if (gData.player = nil) or (gData.player.isBlocked) then exit;
+  if (LAGD.TransPic.CanHide) and (k = Key.Space) then LAGD.TransPic.Hide();
+  if (LAGD.Player = nil) or (LAGD.Player.isBlocked) then exit;
   if (k = key.E) then begin
-    var l := gData.levelGrid[gData.player.GetY,gData.player.GetX].GridObject;
+    var l := LAGD.Grid[LAGD.Player.GetY, LAGD.Player.GetX].GridObject;
     if (l<>nil) and (l.objType = 'nextLevel') then begin
-      ChangeLevel(gData, l.NextLevelName);
+      ChangeLevel(l.NextLevelName);
       exit;
     end;
-    gData.player.UseGrid(gData.levelGrid);
+    LAGD.Player.UseGrid();
   end;
   if (k = Key.W) or (k = key.Up) then
-    gData.player.MoveOn(0, -1, 'up', gData.levelGrid)
+    LAGD.Player.MoveOn(0, -1, 'up')
   else if (k = Key.S) or (k = key.Down) then
-    gData.player.MoveOn(0, 1, 'down', gData.levelGrid)
+    LAGD.Player.MoveOn(0, 1, 'down')
   else if (k = Key.A) or (k = key.Left) then
-    gData.player.MoveOn(-1, 0, 'left', gData.levelGrid)
+    LAGD.Player.MoveOn(-1, 0, 'left')
   else if (k = Key.D) or (k = key.Right) then
-    gData.player.MoveOn(1, 0, 'right', gData.levelGrid)
+    LAGD.Player.MoveOn(1, 0, 'right');
 end;
 
 begin
-  PrepareWindow();
-  gData.transPic := new TransitionPic();
+  Window.Caption := 'Little Adventure';
+  Window.IsFixedSize := True;
+  Window.SetSize(1296, 768);
+  Window.CenterOnScreen();
   
+  LAGD.TransPic := new ITransitionPic();
   ///Загружаем "прогресс" игрока
   var loader := new LALoader('data/userdata.json');
-  ChangeLevel(gData, loader.GetValue&<string>('$.current_level'));
-  //LoadLevel(gData, loader.GetValue&<string>('$.current_level'));
+  ChangeLevel(loader.GetValue&<string>('$.current_level'));
+  //LoadLevel(loader.GetValue&<string>('$.current_level'));
   
   OnDrawFrame += OnDraw;
   OnKeyDown := KeyDown;

@@ -3,16 +3,6 @@
 uses Newtonsoft.Json.Linq;
 uses GraphWPF, WPFObjects, Timers;
 
-///Применение начальных настроек окна игры
-procedure PrepareWindow();
-begin
-  Window.Caption := 'Little Adventure';
-  Window.IsFixedSize := True;
-  Window.Height := 768;
-  Window.Width := 1296;
-  Window.CenterOnScreen();
-end;
-
 ///Проверяет - принадлежит ли точка прямоугольнику объекта
 function PtInside(x,y:real; obj:ObjectWPF):boolean;
 begin
@@ -21,7 +11,49 @@ begin
 end;
 
 type
-  
+  ///Получение и изменение значений в файле JSON формата.
+  LALoader = class
+    private
+    jObj:JObject; //Хранит весь наш файл для дальнейшней работы с ним
+    path:string;
+    
+    public
+    ///Говорим "обрабатывать" файл с JSON структурой по пути path
+    constructor Create(path:string);
+    begin
+      //Считываем текст из файла
+      self.path := path;
+      //Загружаем текстовый файл и преобразуем в структуру JSON.NET библиотеки
+      jObj := JObject.Parse(ReadAllText(path, Encoding.UTF8));
+    end;
+    
+    ///Получаем значение по пути ключей. Где TL - необходимо указать тип значения.
+    ///'$.' - в начале пути приписывать ОБЯЗАТЕЛЬНО!
+    ///Например: GetValue&<integer>('$.enemy.zombie.hp'); //знак & - тоже обязателен.
+    function GetValue<TL>(key:String):TL;
+    begin
+      var token := jObj.SelectToken(key);
+      if (token = nil) then writeln('Такого ключа не существует!')
+      else Result := token.ToObject&<TL>();
+    end;
+    
+    ///Устанавливает значение val по пути key в файле json,
+    ///если такой путь существует!
+    ///Например: SetValue('$.enemy.zombie.hp', 100);
+    procedure SetValue<TL>(key:string; val:TL);
+    begin
+      var v := JToken.FromObject(val as Object);
+      var token := jObj.SelectToken(key);
+      if (token = nil) then writeln('Такого ключа ', key, ' не существует!')
+      else token.Replace(v);
+    end;
+    
+    ///Сохраняет изменения в файле
+    procedure SaveFile();
+    begin
+      WriteAllText(path,jObj.ToString(), Encoding.UTF8);
+    end;
+  end;
   //##############-НАЧАЛО_ИНТЕРФЕЙС-################
   ///Пример использования:
   ///var b:= new LAButton(100, 200, 'img/ui/play.png', 'img/ui/playpress.png');
@@ -85,13 +117,14 @@ type
     frames:array of string; //Кадры анимации
     speed:integer; //Скорость анимации
     isLoop:boolean; //Зациклена ли анимация
-    end;
+  end;
+  
   LSprite = class
     private
     anims:Dictionary<string, spriteInfo>; //Все анимации по их именам
     defaultAnim:string; //Имя стандартной анимации
     curAnim:spriteInfo; //Текущая анимация
-    sprite, tsprite:PictureWPF;
+    sprite:PictureWPF;
     position:Point;
     
     updater:Timer;
@@ -194,10 +227,65 @@ type
   //##############-КОНЕЦ_СПРАЙТЫ-################
   
   type
-  UseObject = class
+  //ОПИСАНИЕ ОБЩЕЙ ИНТЕРФЕЙСНОЙ ЧАСТИ
+  ITransitionPic = interface
+    procedure Show();
+    procedure Hide();
+    procedure ToFront();
+    property CanHide:boolean read;
+  end;
+
+  IUseObject = interface
+    procedure CreateEnemyPoint(ArrayEnemy: array of string);
+    procedure CreateNextLevel(levelName:string);
+    procedure CreateMessage(messages:array of string);
+    function NextMessage():boolean;
+    property objType: string read;
+    property NextLevelName: string read;
+  end;
+  
+  IPlayerWorld = interface
+    procedure SetPos(x,y:integer);
+    procedure MoveOn(x,y:integer; dir:string);
+    procedure UseGrid();
+    procedure Destroy();
+    property GetX: integer read;
+    property GetY: integer read;
+    property isBlocked: boolean read write;
+  end;
+  
+  levelGridRecord = record
+    CantGet:boolean; //Можно ли ступить на клетку
+    CanUse:boolean; //Можно ли взаимодействовать
+    GridObject:IUseObject; //Объект на клетке
+  end;
+  
+  levelGridArr = array[0..16, 0..26] of levelGridRecord;
+  ///Общие данные игры по ходу её выполнения
+  ///Обращение к данным делается, например, так: LAGD.Player
+  LAGD = static class
+    private
+    static pplayer:IPlayerWorld;
+    static llevelGrid:levelGridArr;
+    static llevelPicture, CCombatPic:PictureWPF;
+    static ttransPic:ITransitionPic;
+    public
+    ///Персонаж игрока в обычном уровня
+    static property Player: IPlayerWorld read pplayer write pplayer;
+    ///Сетка уровня
+    static property Grid: levelGridArr read llevelGrid write llevelGrid;
+    ///Изображение обычного уровня
+    static property LevelPic: PictureWPF read llevelPicture write llevelPicture;
+    ///Изображение боевого уровня
+    static property CombatPic: PictureWPF read CCombatPic write CCombatPic;
+    static property TransPic: ITransitionPic read ttransPic write ttransPic;
+  end;
+  //КОНЕЦ ОПИСАНИЯ ОБЩЕЙ ИНТЕРФЕЙСНОЙ ЧАСТИ
+  
+  UseObject = class(IUseObject)
     private
     typeObject:string;
-    dialogBanner:RectangleWPF;
+    static dialogBanner:RectangleWPF;
     messages:array of string;
     messageNum:integer;
     messageCount:integer;
@@ -206,10 +294,10 @@ type
     EnemyPoint:array of string;
     
     public
-    procedure CreateEnemyPoint(ArrayEnemt: array of string);
+    procedure CreateEnemyPoint(ArrayEnemy: array of string);
     begin
       typeObject := 'EnemyPoint';
-      EnemyPoint := ArrayEnemt;
+      EnemyPoint := ArrayEnemy;
     end;
     
     procedure CreateNextLevel(levelName:string);
@@ -222,15 +310,12 @@ type
     begin
       typeObject := 'message';
       self.messages := messages;
-      dialogBanner := new RectangleWPF(0,768-128,1296, 128, Colors.Blue);
-      dialogBanner.FontSize := 24;
-      dialogBanner.FontColor := Colors.Yellow;
-      dialogBanner.Visible := false;
-    end;
-    
-    procedure NextChar();
-    begin
-      
+      if (dialogBanner = nil) then Redraw(procedure() -> begin
+        dialogBanner := new RectangleWPF(0,768-128,1296, 128, Colors.Blue);
+        dialogBanner.FontSize := 24;
+        dialogBanner.FontColor := Colors.Yellow;
+        dialogBanner.Visible := false;
+      end);
     end;
     
     function NextMessage():boolean;
@@ -258,7 +343,7 @@ type
       end;
       messageCount := 1;
       dialogBanner.Text := '';
-      messageTimer := new Timer(32, procedure() -> begin
+      messageTimer := new Timer(16, procedure() -> begin
         dialogBanner.Text += messages[messageNum][messageCount];
         if (messageCount = messages[messageNum].Length) then
           messageTimer.Stop();
@@ -268,30 +353,47 @@ type
       Result := True;
     end;
     
-    ///Возвращает название уровня на который ведет этот объект
+    ///Возвращает тип этого объекта
     property objType: string read typeObject;
+    ///Возвращает название уровня на который ведет этот объект
     property NextLevelName: string read levelName;
   end;  
   
-  levelGridRecord = record
-    CantGet:boolean; //Можно ли ступить на клетку
-    CanUse:boolean; //Можно ли взаимодействовать
-    GridObject:UseObject; //Объект на клетке
-  end;
-  levelGridArr = array[0..16, 0..26] of levelGridRecord;
+
   
   ///Класс игрока в "мире".
-  PlayerWorld = class
+  PlayerWorld = class (IPlayerWorld)
     private
     point, useRect:RectangleWPF; //Невидимое тело объекта
     position:record x,y:integer end;
     sprite:LSprite;
     moveTimer, updateSprite:Timer;
     dir:string;
-    isUsing:boolean;
+    isUsing, blocked:boolean;
+    
+    //Проверяет можно ли использовать клетку на которую смотрит персонаж
+    procedure CheckGridUse();
+    begin
+      var dx := 0; var dy := 0;
+      case self.dir of 
+        'left': dx := -1;
+        'right': dx := 1;
+        'up': dy := -1;
+        'down': dy := 1;
+      end;
+      //Так как это граница экрана, то проверяем точку перехода на след. уровень.
+      if (GetX+dx<0) or (GetX+dx>26) or (GetY+dy<0) or (GetY+dy>15) then 
+      begin
+        //Можно взаимодействовать - значит это точка перехода
+        useRect.Visible := LAGD.Grid[GetY, GetX].CanUse;
+        exit; 
+      end;
+      if (LAGD.Grid[GetY+dy, GetX+dx].GridObject <> nil) and (LAGD.Grid[GetY+dy, GetX+dx].GridObject.objType = 'nextLevel') then exit;
+        useRect.Visible := LAGD.Grid[GetY+dy, GetX+dx].CanUse;
+    end;
     
     public
-    isBlocked:boolean; //Заблокировано ли управление игроком
+     //Заблокировано ли управление игроком
     constructor Create(x,y:integer);
     begin
       position.x := x; position.y := y;
@@ -332,11 +434,12 @@ type
     procedure SetPos(x,y:integer);
     begin
       position.x := x; position.y := y;
-      point.AnimMoveTo(x*48,y*48, 0.1);
+      point.AnimMoveTo(x*48,y*48, 0);
       sprite.PlayAnim('idledown');
+      CheckGridUse();
     end;
     
-    procedure MoveOn(x,y:integer; dir:string; var gridData:levelGridArr);
+    procedure MoveOn(x,y:integer; dir:string);
     begin
       if isUsing then exit;
       self.dir := dir;
@@ -345,10 +448,8 @@ type
       
       //Проверяем возможность "хода", в случае отсутствия просто "поворачиваем"
       //персонажа в нужную сторону.
-      if (GetX+x<0) or (GetX+x>26) or (GetY+y<0) or (GetY+y>15) or gridData[GetY+y, GetX+x].CantGet then 
-      begin
-        sprite.PlayAnim('rotate'+dir);
-      end
+      if (GetX+x<0) or (GetX+x>26) or (GetY+y<0) or (GetY+y>15) or LAGD.Grid[GetY+y, GetX+x].CantGet then 
+        sprite.PlayAnim('rotate'+dir)
       else begin
         //Обрабатываем "поворот" и движение игрока, включая соответствующую анимацию
         sprite.PlayAnim('walk'+dir);
@@ -356,31 +457,13 @@ type
         point.AnimMoveTo(GetX*48, GetY*48, 0.64);
         
         //Таймер нужен чтобы игрок не двигался с бесконечным ускорением
-        moveTimer := new Timer(640, procedure()->
-        begin
-          moveTimer.Stop();
-        end);
+        moveTimer := new Timer(640, procedure() -> moveTimer.Stop());
         moveTimer.Start();
       end;
-      var dx := 0; var dy := 0;
-      case self.dir of 
-        'left': dx := -1;
-        'right': dx := 1;
-        'up': dy := -1;
-        'down': dy := 1;
-      end;
-      //Так как это граница экрана, то проверяем точку перехода на след. уровень.
-      if (GetX+dx<0) or (GetX+dx>26) or (GetY+dy<0) or (GetY+dy>15) then 
-      begin
-        useRect.Visible := gridData[GetY, GetX].CanUse;
-        //Можно взаимодействовать - значит это точка перехода
-        exit; 
-      end;
-      if (gridData[GetY+dy, GetX+dx].GridObject <> nil) and (gridData[GetY+dy, GetX+dx].GridObject.typeObject = 'nextLevel') then exit;
-      useRect.Visible := gridData[GetY+dy, GetX+dx].CanUse;
-      end;
+      CheckGridUse();   
+    end;
       
-    procedure UseGrid(const gridData:levelGridArr);
+    procedure UseGrid();
     begin
       var dx := 0; var dy := 0;
       case self.dir of 
@@ -390,9 +473,9 @@ type
         'down': dy := 1;
       end;
       if (GetX+dx<0) or (GetX+dx>26) or (GetY+dy<0) or (GetY+dy>15) then exit;
-      if not gridData[GetY+dy, GetX+dx].CanUse then exit;
-      var obj := gridData[GetY+dy, GetX+dx].GridObject;
-      case obj.typeObject of
+      if not LAGD.Grid[GetY+dy, GetX+dx].CanUse then exit;
+      var obj := LAGD.Grid[GetY+dy, GetX+dx].GridObject;
+      case obj.objType of
         'message': begin
           isUsing := obj.NextMessage();
         end;
@@ -411,60 +494,15 @@ type
     
     property GetX: integer read position.x;
     property GetY: integer read position.y;
+    property isBlocked: boolean read blocked write blocked;
   end;
   
-  ///Получение и изменение значений в файле JSON формата.
-  LALoader = class
-    private
-    jObj:JObject; //Хранит весь наш файл для дальнейшней работы с ним
-    path:string;
-    
-    public
-    
-    ///Говорим "обрабатывать" файл с JSON структурой по пути path
-    constructor Create(path:string);
-    begin
-      //Считываем текст из файла
-      self.path := path;
-      var input := ReadAllText(path, Encoding.UTF8);
-      //Преобразуем в структуру JSON.NET библиотеки
-      jObj := JObject.Parse(input);
-    end;
-    
-    ///Получаем значение по пути ключей. Где TL - необходимо указать тип значения.
-    ///'$.' - в начале пути приписывать ОБЯЗАТЕЛЬНО!
-    ///Например: GetValue&<integer>('$.enemy.zombie.hp'); //знак & - тоже обязателен.
-    function GetValue<TL>(key:String):TL;
-    begin
-      var token := jObj.SelectToken(key);
-      if (token = nil) then writeln('Такого ключа не существует!')
-      else Result := token.ToObject&<TL>();
-    end;
-    
-    ///Устанавливает значение val по пути key в файле json,
-    ///если такой путь существует!
-    ///Например: SetValue('$.enemy.zombie.hp', 100);
-    procedure SetValue<TL>(key:string; val:TL);
-    begin
-      var v := JToken.FromObject(val as Object);
-      var token := jObj.SelectToken(key);
-      if (token = nil) then writeln('Такого ключа ', key, ' не существует!')
-      else token.Replace(v);
-    end;
-    
-    ///Сохраняет изменения в файле
-    procedure SaveFile();
-    begin
-      WriteAllText(path,jObj.ToString(), Encoding.UTF8);
-    end;
-  end;
-  
-  TransitionPic = class
+  TransitionPic = class (ITransitionPic)
     private
     pic:RectangleWPF;
     isCanHide:boolean;
     public
-    constructor Create();
+    constructor Create;
     begin
       Redraw(procedure()-> begin
         pic := new RectangleWPF(0, 0, 1296, 768, Colors.Black);
@@ -472,55 +510,51 @@ type
         pic.FontSize := 24;
         pic.TextAlignment := Alignment.Center;
       end);
-      //pic.Visible := false;
     end;
     
     ///Показать изображение перехода
-    procedure Show(var player:PlayerWorld);
+    procedure Show();
     begin
-      if (player <> nil) then
-        player.isBlocked := true; //Блокируем движение игрока
-      pic.Visible := true;
-      pic.Text := 'Загрузка уровня...';
+      Show('Для продолжения нажмите SPACE');
+    end;
+    
+    ///Показать изображение перехода с нужным текстом после загрузки
+    procedure Show(message:string);
+    begin
+      if (LAGD.player <> nil) then
+        LAGD.player.isBlocked := true; //Блокируем движение игрока
+      Redraw(procedure()-> begin
+        pic.Visible := true;
+        pic.Text := 'Загрузка уровня...';
+      end);
       var t:Timer;
-      t := new Timer(500, procedure() -> begin
+      t := new Timer(1000, procedure() -> begin
         isCanHide := true;
-        pic.Text := 'Для продолжения нажмите SPACE';
+        pic.Text := message;
         t.Stop();
       end);
       t.Start();
     end;
     
     ///Скрыть изображение перехода
-    procedure Hide(var player:PlayerWorld);
+    procedure Hide();
     begin
-      player.isBlocked := false; //Разблокируем движение игрока
+      LAGD.player.isBlocked := false; //Разблокируем движение игрока
       isCanHide := false;
       pic.Visible := false;
     end;
     
     procedure ToFront();
-    begin
-      pic.ToFront();
-    end;
+    begin if (pic <> nil) then pic.ToFront(); end;
     
     property CanHide:boolean read isCanHide;
   end;
   
-  ///Данные игры
-  gameInfo = record
-    player:PlayerWorld;
-    levelGrid:levelGridArr;
-    levelPicture, CombatPicture:PictureWPF;
-    transPic:TransitionPic; //Экран на время перехода между уровнями
-  end;
-  
   ///Загружает уровень с именем lname и настраивает сетку grid.
-  procedure LoadLevel(var gameData:gameInfo; lname:string);
+  procedure LoadLevel(lname:string);
   begin
     var loader := new LALoader('data/levels/LALevels.ldtk');
-    //Устанавливаем изображение уровня
-    gameData.levelPicture := new PictureWPF(0, 0,'data/levels/LALevels/png/'+lname+'.png');
+    
     var i := -1;
     //Находим номер уровня в массиве
     for i := 0 to loader.GetValue&<JToken>('$.levels').Count()-1 do begin
@@ -532,16 +566,13 @@ type
     for var j:=0 to val.Count()-1 do begin
       x := Integer(val[j]['__grid'][0]);
       y := Integer(val[j]['__grid'][1]);
-      var cell := cell;
+      var cell := LAGD.Grid[y,x];
+      ///Определя
       case val[j]['__identifier'].ToString() of
-        'Wall': begin
-          cell.CantGet := true;
-        end;
+        'Wall': cell.CantGet := true;
         'SpawnPoint': begin
-          if (gameData.player = nil) then
-            gameData.player := new PlayerWorld(x,y)
-          else
-            gameData.player.SetPos(x,y);
+          if (LAGD.Player = nil) then LAGD.Player := new PlayerWorld(x,y)
+          else LAGD.Player.SetPos(x,y);
         end;
         'MessageObject': begin
           //Можно ли "наступить" на объект взаимодействия
@@ -563,24 +594,28 @@ type
           cell.GridObject.CreateEnemyPoint(tt);
         end;
       end;
+      LAGD.Grid[y,x] := cell;
     end;
+    //Устанавливаем изображение уровня
+    LAGD.LevelPic := new PictureWPF(0, 0,'data/levels/LALevels/png/'+lname+'.png');
+    LAGD.LevelPic.ToBack(); //Перемещаем картинку уровня назад
   end;
   
   ///Закрывает текущий уровень
-  procedure CloseLevel(var gData:gameInfo);
+  procedure CloseLevel();
   begin
-    gData.transPic.Show(gData.player); //Включаем экран перехода
-    if (gData.levelPicture = nil) then exit;
-    gData.levelPicture.Destroy(); //Уничтожаем старое изображение уровня
+    LAGD.TransPic.Show(); //Включаем экран перехода
+    if (LAGD.LevelPic = nil) then exit;
+    LAGD.LevelPic.Destroy(); //Уничтожаем старое изображение уровня
     var t : levelGridArr; //
-    gData.levelGrid := t; // Обнуляем таким образом сетку уровня
+    LAGD.Grid := t; // Обнуляем таким образом сетку уровня
   end;
   
   ///Меняет текущий уровень на уровень с именем lname
-  procedure ChangeLevel(var gData:gameInfo; lname:string);
+  procedure ChangeLevel(lname:string);
   begin
-    CloseLevel(gData);
-    LoadLevel(gData, lname);
+    CloseLevel();
+    LoadLevel(lname);
   end;
   
   procedure MainMenu();
@@ -588,11 +623,10 @@ type
     
   end;
   
-  procedure CombatField(var gData:gameInfo);
+  procedure CombatField();
   begin
-    gData.player.isBlocked := true; //Блокируем управление игроком
-    gData.CombatPicture := new PictureWPF(0, 0,'data\levels\LALevels\png\CombatField.png');
-    gData.player.SetPos(8,16);
-  end;
-  
+    LAGD.Player.isBlocked := true; //Блокируем управление игроком
+    LAGD.CombatPic := new PictureWPF(0, 0,'data\levels\LALevels\png\CombatField.png');
+    LAGD.Player.SetPos(8,16);
+  end; 
 end.
