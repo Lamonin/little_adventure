@@ -10,8 +10,25 @@ begin
   Result:=True;
 end;
 
-procedure CombatField();
- forward;
+///Меняет изображение from на изображение из файла по пути too.
+procedure ChangePicture(var from:PictureWPF; too:string);
+begin
+  var p := from;
+  from := new PictureWPF(p.LeftTop, too);
+  p.Destroy();
+end;
+
+///Умножает цвет объекта на mult, делая его ярче/темнее.
+procedure Tint(var obj:ObjectWPF; mult:real);
+begin
+  var c := obj.Color;
+  var R := round(c.R*mult); if R>255 then R:= 255 else if R<0 then R := 0;
+  var G := round(c.G*mult); if G>255 then G:= 255 else if G<0 then G := 0;
+  var B := round(c.B*mult); if B>255 then B:= 255 else if B<0 then B := 0;
+  obj.Color := ARGB(255, R, G, B);  
+end;
+
+procedure CombatField(); forward;
 
 type
   ///Получение и изменение значений в файле JSON формата.
@@ -67,30 +84,20 @@ type
     idlePic, clickPic:string;
     
     ///Изменение спрайта на clickPic
-    procedure Clicked(x, y: real; mousebutton: integer);
+    procedure ClickedSprite(x, y: real; mousebutton: integer);
     begin
       if (mousebutton <> 1) then exit;
-      if PtInside(x,y,pic) then 
-      begin
-        var t := pic;
-        pic := new PictureWPF(t.LeftTop, clickPic);
-        t.Destroy();
-      end;
+      if PtInside(x,y,pic) then ChangePicture(pic, clickPic);
     end;
     
     ///Обработка нажатия
-    procedure Process(x, y: real; mousebutton: integer);
+    procedure ProcessSprite(x, y: real; mousebutton: integer);
     begin
-      var t := pic;
-      pic := new PictureWPF(t.LeftTop, idlePic);
-      t.Destroy();
+      ChangePicture(pic, idlePic);
       if (mousebutton <> 0) then exit;
-      
-      if (OnClick <> nil) and PtInside(x,y,pic) then begin
-        OnClick();
-      end;
+      if (OnClick <> nil) and PtInside(x,y,pic) then OnClick();
     end;
-    
+
     public
     event OnClick: procedure; //Событие нажатия на кнопку
     
@@ -101,15 +108,15 @@ type
       self.idlePic := idlePic;
       self.clickPic := clickPic;
       pic := new PictureWPF(x, y, idlePic);
-      OnMouseDown += Clicked;
-      OnMouseUp += Process;
+      OnMouseDown += ClickedSprite;
+      OnMouseUp += ProcessSprite;
     end;
     
     procedure Destroy();
     begin
       pic.Destroy();
-      OnMouseDown -= Clicked;
-      OnMouseUp -= Process;
+      OnMouseDown -= ClickedSprite;
+      OnMouseUp -= ProcessSprite;
     end;
   end;
   
@@ -132,14 +139,15 @@ type
     
     updater:Timer;
     frameNum:Integer; //Номер текущего кадра анимации
+    isVisible:boolean;
     
     procedure ChangeSprite();
     begin
       Redraw(procedure()-> begin
-        var p := sprite.LeftTop;
         sprite.Destroy();
-        sprite:= new PictureWPF(p, curAnim.frames[frameNum]);
+        sprite:= new PictureWPF(position, curAnim.frames[frameNum]);
       end);
+      sprite.Visible := isVisible;
     end;
     
     //Обновление кадра изображения
@@ -153,7 +161,8 @@ type
     
     procedure SetPos(pos:Point);
     begin
-      pos.Y -= 22;//Смещаем спрайт вверх, чтобы ногами был по центру тайла
+      pos.X += 24 - sprite.Width / 2;
+      pos.Y -= sprite.Height / 2;
       sprite.MoveTo(pos.X, pos.Y);
       position := pos;
     end;
@@ -162,23 +171,26 @@ type
     ///Конструктор с инициализацией стандартной анимации с обычными параметрами
     constructor Create(x,y:integer; aname:string; frames:array of string);
     begin
-      x := x * 48; y := y * 48;
-      anims := new Dictionary<string, spriteInfo>();
-      defaultAnim:=aname;
-      AddAnim(aname, frames, 160, True); //Обычно анимация зациклена
-      sprite := new PictureWPF(x,y,anims[defaultAnim].frames[0]);
+//      Visible := True;
+//      x := x * 48; y := y * 48;
+//      anims := new Dictionary<string, spriteInfo>();
+//      defaultAnim:=aname;
+//      AddAnim(aname, frames, 160, True); //Обычно анимация зациклена
+//      sprite := new PictureWPF(x,y,anims[defaultAnim].frames[0]);
+      Create(x,y,aname, frames, 160, True);
     end;
     
     ///Конструктор с инициализацией стандартной анимации
     constructor Create(x,y:integer; aname:string; frames:array of string; speed:integer; looped:boolean);
     begin
-      x := x * 48; y := y * 48;
+      Visible := True;
+      position.x := x * 48; position.y := y * 48;
       anims := new Dictionary<string, spriteInfo>();
       defaultAnim:=aname;
       AddAnim(aname, frames, speed, looped);
       sprite := new PictureWPF(x,y,anims[defaultAnim].frames[0]);
     end;
-    
+
     ///Добавляет новую анимацию с именем aname
     procedure AddAnim(aname:string; frames:array of string; speed:integer; looped:boolean);
     begin
@@ -210,6 +222,8 @@ type
     
     ///Устанавливает позицию спрайта
     property Pos: Point write SetPos;
+    ///Видимость спрайта
+    property Visible: boolean write isVisible read isVisible;
   end;
   
   ///Загружает спрайт с именем sname.
@@ -230,7 +244,7 @@ type
   //##############-КОНЕЦ_СПРАЙТЫ-################
   
   type
-  //ОПИСАНИЕ ОБЩЕЙ ИНТЕРФЕЙСНОЙ ЧАСТИ
+  //ОПИСАНИЕ ИНТЕРФЕЙСНОЙ ЧАСТИ
   ITransitionPic = interface
     procedure Show();
     procedure Hide();
@@ -264,7 +278,8 @@ type
     GridObject:IUseObject; //Объект на клетке
   end;
   
-  levelGridArr = array[0..16, 0..26] of levelGridRecord;
+  levelGridArr = array[0..15, 0..26] of levelGridRecord;
+  
   ///Общие данные игры по ходу её выполнения
   ///Обращение к данным делается, например, так: LAGD.Player
   LAGD = static class
@@ -284,7 +299,7 @@ type
     static property CombatPic: PictureWPF read CCombatPic write CCombatPic;
     static property TransPic: ITransitionPic read ttransPic write ttransPic;
   end;
-  //КОНЕЦ ОПИСАНИЯ ОБЩЕЙ ИНТЕРФЕЙСНОЙ ЧАСТИ
+  //КОНЕЦ ОПИСАНИЯ ИНТЕРФЕЙСНОЙ ЧАСТИ
   
   UseObject = class(IUseObject)
     private
@@ -296,27 +311,27 @@ type
     levelName:string;
     messageTimer:Timer;
     EnemyPoint:array of string;
-    static enemyPoints:List<GPoint>;
+    static enemyPoints:List<Point>;
     
     public 
-    
     static constructor();
     begin
-      enemyPoints := new List<Gpoint>();
+      enemyPoints := new List<Point>();
     end;
     
+    ///Рассчитываем расстояние до точек начала боя
+    ///выбираем самое короткое из них.
     static function CalculateEnemyPoint():integer;
     var min:integer;
     begin
       min:= 100;
       if (enemyPoints.Count<=0) then exit;
-        for var i:=0 to enemyPoints.Count-1 do 
-          begin
-     result:= Round(Sqrt((enemyPoints[i].x - LAGD.Player.GetX)**2 + (enemyPoints[i].y - LAGD.Player.GetY)**2));
-      if (Result < Min) then
-        Min := Result;
-     end;
-     Writeln(min);
+      for var i:=0 to enemyPoints.Count-1 do 
+      begin
+        result:= Round(Sqrt((enemyPoints[i].x - LAGD.Player.GetX)**2 + (enemyPoints[i].y - LAGD.Player.GetY)**2));
+        if (Result < Min) then min := Result;
+      end;
+      Writeln(min);
     end;
     
     procedure CreateEnemyPoint(ArrayEnemy: array of string; X,Y: integer);
@@ -348,15 +363,15 @@ type
     procedure CreateEnemy(Index:integer; X,Y:integer);
     begin
       case EnemyPoint[Index] of
-                'Skeleton':begin
-                  var s1 := new LSprite(X, Y, 'idleDown', LoadSprites('enemy\Skeleton_Seeker\idle', 6), 160, true);
-                  s1.PlayAnim('idleDown');
-                end;
-                'TreeEnemy':begin
-                  var s1 := new LSprite(X, Y, 'idleDown', LoadSprites('enemy\Sprout\idle', 4), 160, true);
-                  s1.PlayAnim('idleDown');
-                end;
-              end;
+      'Skeleton':begin
+        var s1 := new LSprite(X, Y, 'idleDown', LoadSprites('enemy\Skeleton_Seeker\idle', 6), 160, true);
+        s1.PlayAnim('idleDown');
+      end;
+      'TreeEnemy':begin
+        var s1 := new LSprite(X, Y, 'idleDown', LoadSprites('enemy\Sprout\idle', 4), 160, true);
+        s1.PlayAnim('idleDown');
+      end;
+      end;
     end;
     
     procedure CreateNextLevel(levelName:string);
@@ -416,9 +431,7 @@ type
     property objType: string read typeObject;
     ///Возвращает название уровня на который ведет этот объект
     property NextLevelName: string read levelName;
-  end;  
-  
-
+  end;
   
   ///Класс игрока в "мире".
   PlayerWorld = class (IPlayerWorld)
@@ -429,6 +442,12 @@ type
     moveTimer, updateSprite:Timer;
     dir:string;
     isUsing, blocked:boolean;
+    
+    procedure Blocking(blocked:boolean);
+    begin
+      self.blocked := blocked;
+      sprite.Visible := not blocked;
+    end;
     
     //Проверяет можно ли использовать клетку на которую смотрит персонаж
     procedure CheckGridUse();
@@ -556,7 +575,7 @@ type
     
     property GetX: integer read position.x;
     property GetY: integer read position.y;
-    property isBlocked: boolean read blocked write blocked;
+    property isBlocked: boolean read blocked write Blocking;
   end;
   
   TransitionPic = class (ITransitionPic)
@@ -692,25 +711,20 @@ type
     
   end;
   
-  procedure Escape(X,Y:integer);
+  procedure Escape();
   begin   
-       LAGD.Player.SetPos(X,Y);
        LAGD.Player.isBlocked:= false;
   end;
   
   procedure CombatField();
-  var
-    X,Y: integer;
   begin
-    X:= LAGD.Player.GetX;
-    Y:= LAGD.Player.GetY-1;
     LAGD.Player.isBlocked := true; //Блокируем управление игроком
     LAGD.CombatPic := new PictureWPF(0, 0,'data\levels\LALevels\png\CombatField.png');
+    ///По позиции игрока начинаем бой.
     LAGD.Grid[LAGD.Player.GetY,LAGD.Player.GetX].GridObject.StartBattle();
-    LAGD.Player.SetPos(8,16);
      var b:= new LAButton(12*48, 10*48, 'img/ui/play.png', 'img/ui/playpress.png');
      b.OnClick += procedure() -> begin 
-       Escape(X,Y);
+       Escape();
      end;
   end; 
   

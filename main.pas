@@ -43,6 +43,6 @@ begin
   var loader := new LALoader('data/userdata.json');
   ChangeLevel(loader.GetValue&<string>('$.current_level'));
   
-  OnDrawFrame += OnDraw;
+  OnDrawFrame := OnDraw;
   OnKeyDown := KeyDown;
 end.
