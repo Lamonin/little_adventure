@@ -10,6 +10,9 @@ begin
   Result:=True;
 end;
 
+procedure CombatField();
+ forward;
+
 type
   ///Получение и изменение значений в файле JSON формата.
   LALoader = class
@@ -236,7 +239,7 @@ type
   end;
 
   IUseObject = interface
-    procedure CreateEnemyPoint(ArrayEnemy: array of string);
+    procedure CreateEnemyPoint(ArrayEnemy: array of string; X,Y: integer);
     procedure CreateNextLevel(levelName:string);
     procedure CreateMessage(messages:array of string);
     function NextMessage():boolean;
@@ -292,12 +295,37 @@ type
     levelName:string;
     messageTimer:Timer;
     EnemyPoint:array of string;
+    static enemyPoints:List<GPoint>;
     
-    public
-    procedure CreateEnemyPoint(ArrayEnemy: array of string);
+    public 
+    
+    static constructor();
+    begin
+      enemyPoints := new List<Gpoint>();
+    end;
+    
+    static function CalculateEnemyPoint():integer;
+    var min:integer;
+    begin
+      min:= 100;
+      if (enemyPoints.Count<=0) then exit;
+        for var i:=0 to enemyPoints.Count-1 do 
+          begin
+     result:= Round(Sqrt((enemyPoints[i].x - LAGD.Player.GetX)**2 + (enemyPoints[i].y - LAGD.Player.GetY)**2));
+      if (Result < Min) then
+        Min := Result;
+     end;
+     Writeln(min);
+    end;
+    
+    procedure CreateEnemyPoint(ArrayEnemy: array of string; X,Y: integer);
     begin
       typeObject := 'EnemyPoint';
       EnemyPoint := ArrayEnemy;
+      var p : GPoint;
+      P.X :=X;
+      p.Y :=Y;
+      enemyPoints.add(p);
     end;
     
     procedure CreateNextLevel(levelName:string);
@@ -390,6 +418,9 @@ type
       end;
       if (LAGD.Grid[GetY+dy, GetX+dx].GridObject <> nil) and (LAGD.Grid[GetY+dy, GetX+dx].GridObject.objType = 'nextLevel') then exit;
         useRect.Visible := LAGD.Grid[GetY+dy, GetX+dx].CanUse;
+        UseObject.CalculateEnemyPoint();
+        var l := LAGD.Grid[LAGD.player.GetY,LAGD.player.GetX].GridObject;
+        if (l <> nil) and (l.Objtype = 'EnemyPoint') then CombatField();
     end;
     
     public
@@ -591,7 +622,7 @@ type
         'EnemyPoint': begin
           cell.GridObject := new UseObject();
           var tt:= val[j]['fieldInstances'][0]['__value'].ToObject&<array of string>();
-          cell.GridObject.CreateEnemyPoint(tt);
+          cell.GridObject.CreateEnemyPoint(tt, x, y);
         end;
       end;
       LAGD.Grid[y,x] := cell;
@@ -629,4 +660,5 @@ type
     LAGD.CombatPic := new PictureWPF(0, 0,'data\levels\LALevels\png\CombatField.png');
     LAGD.Player.SetPos(8,16);
   end; 
+  
 end.
