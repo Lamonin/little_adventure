@@ -167,6 +167,11 @@ type
       position := pos;
     end;
     
+    function getFrameCount():integer;
+     begin
+       Result:= curAnim.frames.Length;
+     end;
+    
     public
     ///Конструктор с инициализацией стандартной анимации с обычными параметрами
     constructor Create(x,y:integer; aname:string; frames:array of string);
@@ -184,13 +189,19 @@ type
     constructor Create(x,y:integer; aname:string; frames:array of string; speed:integer; looped:boolean);
     begin
       Visible := True;
-      position.x := x * 48; position.y := y * 48;
+      position.x := x * 48; position.y := y * 48;     
       anims := new Dictionary<string, spriteInfo>();
       defaultAnim:=aname;
       AddAnim(aname, frames, speed, looped);
       sprite := new PictureWPF(x,y,anims[defaultAnim].frames[0]);
+      SetPos(position);
     end;
-
+   
+    function PtInside(x,y:Real):boolean;
+    begin
+      result := LAEngine.PtInside(X,Y,sprite);
+    end;
+    
     ///Добавляет новую анимацию с именем aname
     procedure AddAnim(aname:string; frames:array of string; speed:integer; looped:boolean);
     begin
@@ -222,6 +233,7 @@ type
     
     ///Устанавливает позицию спрайта
     property Pos: Point write SetPos;
+    property CurrentFrameCount: Integer Read getFrameCount;
     ///Видимость спрайта
     property Visible: boolean write isVisible read isVisible;
   end;
@@ -299,7 +311,110 @@ type
     static property CombatPic: PictureWPF read CCombatPic write CCombatPic;
     static property TransPic: ITransitionPic read ttransPic write ttransPic;
   end;
-  //КОНЕЦ ОПИСАНИЯ ИНТЕРФЕЙСНОЙ ЧАСТИ
+  //КОНЕЦ ОПИСАНИЯ ИНТЕРФЕЙСНОЙ ЧАСТ
+IBattleEntity = interface
+procedure Destroy();
+procedure Death();
+procedure Damage(Dmg: integer);
+procedure Attack(E: IBattleEntity); 
+property ThisLock: Boolean Read Write;   
+property Pname: string Read Write ;
+ end;
+
+
+  BattleProcessor = class
+    private
+      static ListEnemy: array of IBattleEntity;
+      static SLEnemy: IBattleEntity;
+    public
+      static property EnemyList: array of IBattleEntity Read ListEnemy Write ListEnemy;
+      static property selectedEnemy: IBattleEntity Read SLEnemy Write SLEnemy;
+      
+     
+  end;
+
+  BattleEntity = class(IBattleEntity) 
+    private
+    name: string;
+     hp : integer;
+     AttackDmg : integer;
+     agility : integer;
+     ActionPoint : integer;
+     Sprite : LSprite;
+     LockThis :boolean;
+     procedure klik(x, y: real; mousebutton: integer);
+     begin
+       if (mousebutton=1) and (Sprite.PtInside(x,y)) and not(ThisLock) then begin
+         Writeln(Pname);
+         if (BattleProcessor.SLEnemy<>nil) then
+           BattleProcessor.SLEnemy.ThisLock:= false;
+         ThisLock:=true;
+         BattleProcessor.SLEnemy:=self;
+       end;
+     end;
+     
+    public
+     constructor Create();
+     begin
+       OnMouseDown += klik;
+     end;
+    
+     procedure Destroy();
+      begin
+      Sprite.Destroy;  
+      end;
+      
+      procedure Death();
+       begin
+         Sprite.PlayAnim('Death');
+       end;
+      
+     procedure Damage(Dmg: integer);
+      begin
+        hp-=Dmg;
+        if (hp<=0) then
+          Death();
+      end;
+      
+     procedure Attack(E: IBattleEntity);      
+      begin
+        Sprite.PlayAnim('attack');
+        E.Damage(AttackDmg);
+      end; 
+      property Pname: string Read name Write name;
+      property ThisLock: Boolean Read LockThis Write LockThis;
+  end;
+  
+  SkeletonEnemy = class(BattleEntity)
+   private 
+   
+   public
+   constructor Create(X, Y:integer);
+   begin
+     name := 'Skeleton';
+     Sprite:= new LSprite(X,Y,'Idle',LoadSprites('enemy\Skeleton_Seeker\idle', 6));
+     Sprite.AddAnim('Attack', LoadSprites('enemy\Skeleton_Seeker\death', 5), 160, false);
+     Sprite.AddAnim('Death', LoadSprites('enemy\Skeleton_Seeker\death', 5), 160, false);
+     Sprite.PlayAnim('Idle');
+   end;
+   
+  end;
+  
+  TreeEnemy = class(BattleEntity)
+   private 
+   
+   public
+   constructor Create(X, Y:integer);
+    begin
+     name := 'TreeEnemy';
+     Sprite:= new LSprite(X,Y,'Idle',LoadSprites('enemy\Sprout\idle', 4));
+     Sprite.AddAnim('Attack', LoadSprites('enemy\Sprout\attack', 6), 160, false);
+     Sprite.AddAnim('Death', LoadSprites('enemy\Sprout\death', 8), 160, false);
+     Sprite.PlayAnim('Idle');
+    end;
+   end;
+  
+ 
   
   UseObject = class(IUseObject)
     private
@@ -348,6 +463,7 @@ type
     ///Начало битвы, спавн врагов
     procedure StartBattle();
     begin
+      BattleProcessor.EnemyList:= new IBattleEntity[EnemyPoint.Length];
       for var i:= 0 to EnemyPoint.Length-1 do
        begin
         case (i+1) of
@@ -362,16 +478,16 @@ type
     
     procedure CreateEnemy(Index:integer; X,Y:integer);
     begin
+      var E: BattleEntity;
       case EnemyPoint[Index] of
       'Skeleton':begin
-        var s1 := new LSprite(X, Y, 'idleDown', LoadSprites('enemy\Skeleton_Seeker\idle', 6), 160, true);
-        s1.PlayAnim('idleDown');
+        E:= new SkeletonEnemy(X,Y);
       end;
       'TreeEnemy':begin
-        var s1 := new LSprite(X, Y, 'idleDown', LoadSprites('enemy\Sprout\idle', 4), 160, true);
-        s1.PlayAnim('idleDown');
+        E:= new TreeEnemy(X,Y);
       end;
       end;
+      BattleProcessor.EnemyList[Index]:= E;
     end;
     
     procedure CreateNextLevel(levelName:string);
@@ -712,7 +828,9 @@ type
   end;
   
   procedure Escape();
-  begin   
+  begin
+       
+      // LAGD.CombatPic.Destroy();
        LAGD.Player.isBlocked:= false;
   end;
   
@@ -724,7 +842,13 @@ type
     LAGD.Grid[LAGD.Player.GetY,LAGD.Player.GetX].GridObject.StartBattle();
      var b:= new LAButton(12*48, 10*48, 'img/ui/play.png', 'img/ui/playpress.png');
      b.OnClick += procedure() -> begin 
+       for var i:=0 to BattleProcessor.EnemyList.Length-1 do
+       BattleProcessor.EnemyList[i].death;
        Escape();
+     end;
+     var BAttack:= new LAButton(12*48, 10*48, 'img/ui/play.png', 'img/ui/playpress.png');
+     BAttack.OnClick += procedure() -> begin 
+       
      end;
   end; 
   
