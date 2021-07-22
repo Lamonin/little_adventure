@@ -352,15 +352,38 @@ type
     property ThisLock: Boolean Read Write;   
     property Pname: string Read Write ;
     property PicC: PictureWPF Read Write;
+    property GetHP: integer Read;
+    Function AddAction():boolean;
   end;
   //КОНЕЦ ОПИСАНИЯ ИНТЕРФЕЙСНОЙ ЧАСТИ
 
   BattleProcessor = class
     private
+      static CombatTimer: Timer;
+      static Stoptimer: boolean;
       static ListEnemy: array of IBattleEntity;
       static PPlayerBattle: IBattleEntity;
       static SLEnemy: IBattleEntity;
     public
+     static procedure StartBattle();
+        begin
+        CombatTimer := new Timer(250, procedure() ->
+      begin
+          //if (stopTimer) then exit;
+          var ActionList:= new List<IBattleEntity>();
+          
+        foreach var t in ListEnemy do 
+        begin
+         if t.AddAction() then ActionList.Add(t);                 
+        end;
+         if (ActionList.Count>0) then
+         begin       
+           Stoptimer:= true;
+           foreach var E in ActionList do begin  if PPlayerBattle.GetHP <=0 then begin CombatTimer.Stop; exit end; E.Attack(PPlayerBattle); end;
+         end;
+      end);
+        CombatTimer.Start;
+        end;
       static property PlayerBattle: IBattleEntity Read PPlayerBattle Write PPlayerBattle; 
       static property EnemyList: array of IBattleEntity Read ListEnemy Write ListEnemy;
       static property selectedEnemy: IBattleEntity Read SLEnemy Write SLEnemy;
@@ -392,8 +415,17 @@ type
     public
      constructor Create();
      begin
-       Writeln('aboba');
        OnMouseDown += klik;
+     end;
+     
+     function AddAction():boolean;
+     begin
+       actionPoint+= agility;
+       if actionPoint >=10 then 
+       begin
+         actionPoint-=10;
+         result:= true;
+         end;
      end;
     
      procedure Destroy();
@@ -401,23 +433,24 @@ type
       Sprite.Destroy;
      end;
       
-     procedure Death();
+     procedure Death();virtual;
      begin
       Sprite.PlayAnim('Death');
      end;
       
-     procedure Damage(Dmg: integer);
+     procedure Damage(Dmg: integer);virtual;
       begin
         hp -= Dmg;
         if (hp<=0) then Death();
-        WriteLn(Dmg);
       end;
       
      procedure Attack(E: IBattleEntity);virtual;      
       begin
-        Sprite.PlayAnim('attack');
         E.Damage(AttackDmg);
+        Sprite.PlayAnim('attack');
+        
       end; 
+      property GetHP: integer Read hp;
       property Pname: string Read name Write name;
       property ThisLock: Boolean Read LockThis Write LockThis;
       property PicC: PictureWPF Read CPic Write CPic;
@@ -430,6 +463,8 @@ type
    
    constructor Create(X, Y:integer);
    begin
+     attackDmg:=4;
+     agility:=3;
      hp:= 10;
      name := 'Skeleton';
      writeln(X,Y:10);
@@ -448,6 +483,8 @@ type
    
    constructor Create(X, Y:integer);
     begin
+     attackDmg:=1;
+     agility:=4;
      hp:=15;
      name := 'TreeEnemy';
      Sprite:= new LSprite(X,Y,'Idle',LoadSprites('enemy\Sprout\idle', 4));
@@ -463,14 +500,29 @@ type
   public
   constructor create();
     begin
+    hp:=20;
     attackDmg:=5;
+    agility:=2;
+    name:= 'Player';
     end;
    procedure Attack(E: IBattleEntity);override;      
       begin
         if (E = nil) then exit;
         E.Damage(AttackDmg);
       end;
+      
+    procedure Death();override;
+     begin
+      Writeln('Babah');
+     end;
+      
+     procedure Damage(Dmg: integer);override;
+      begin
+        hp -= Dmg;
+        if (hp<=0) then Death();
+      end;
   end;
+  
   
   UseObject = class(IUseObject)
     private
@@ -904,8 +956,9 @@ type
     BattleProcessor.PlayerBattle:= new BattlePlayre;
      var b:= new LAButton(12*48, 10*48, 'play.png', 'playpress.png');
      b.OnClick += procedure() -> begin 
-      battleprocessor.PlayerBattle.Attack(BattleProcessor.SLEnemy);
+      battleprocessor.PlayerBattle.Attack(BattleProcessor.SLEnemy);     
      end;
+     BattleProcessor.StartBattle();
   end; 
   
   //РАЗДЕЛ ОПИСАНИЯ ГЛАВНОГО МЕНЮ
