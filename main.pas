@@ -38,10 +38,7 @@ begin
   Window.SetSize(1296, 768);
   Window.CenterOnScreen();
   
-  LAGD.TransPic := new TransitionPic();
-  ///Загружаем "прогресс" игрока
-  var loader := new LALoader('data/userdata.json');
-  ChangeLevel(loader.GetValue&<string>('$.current_level'));
+  DrawMainMenu();
   
   OnDrawFrame := OnDraw;
   OnKeyDown := KeyDown;

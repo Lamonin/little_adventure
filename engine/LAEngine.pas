@@ -81,43 +81,75 @@ type
   LAButton = class
     private
     pic:PictureWPF;
-    idlePic, clickPic:string;
+    isClicked:boolean;
+    idlePic, clickPic, buttonText:string;
     
     ///Изменение спрайта на clickPic
     procedure ClickedSprite(x, y: real; mousebutton: integer);
     begin
-      if (mousebutton <> 1) then exit;
-      if PtInside(x,y,pic) then ChangePicture(pic, clickPic);
+      if (pic = nil) then exit;
+      if (mousebutton <> 1) and (isClicked) then exit;
+      if PtInside(x,y,pic) then begin
+        isClicked := True;
+        ChangePicture(pic, clickPic);
+        ApplyText();
+      end;
     end;
     
     ///Обработка нажатия
     procedure ProcessSprite(x, y: real; mousebutton: integer);
     begin
+      if (pic = nil) then exit;
       ChangePicture(pic, idlePic);
+      ApplyText();
       if (mousebutton <> 0) then exit;
-      if (OnClick <> nil) and PtInside(x,y,pic) then OnClick();
+      if (OnClick <> nil) and PtInside(x,y,pic) and (isClicked) then begin
+        OnClick();
+      end;
+      isClicked := false;
     end;
-
-    public
-    event OnClick: procedure; //Событие нажатия на кнопку
     
+    procedure ApplyText();
+    begin
+      if (buttonText = '') or (pic = nil) then exit;
+      pic.Text := buttonText;
+      pic.FontName := 'GranaPadano';
+      pic.FontColor := Colors.Yellow;
+      pic.FontSize := 32;
+      pic.TextAlignment := Alignment.Center;
+    end;
+    
+    procedure SetText(t:string);
+    begin
+      buttonText := t;
+      ApplyText();
+    end;
+    
+    public
+     //Событие нажатия на кнопку
+    OnClick: procedure;
     ///Создаем кнопку с изображением по умолчанию idlePic
     ///И с изображением по нажатию clickPic.
     constructor Create(x,y:integer; idlePic, clickPic:string);
     begin
-      self.idlePic := idlePic;
-      self.clickPic := clickPic;
-      pic := new PictureWPF(x, y, idlePic);
+      self.idlePic := 'img\ui\' + idlePic;
+      self.clickPic := 'img\ui\' + clickPic;
+      
+      pic := new PictureWPF(x, y, self.idlePic);
       OnMouseDown += ClickedSprite;
       OnMouseUp += ProcessSprite;
     end;
     
     procedure Destroy();
     begin
-      pic.Destroy();
+      if (pic = nil) then exit;
       OnMouseDown -= ClickedSprite;
       OnMouseUp -= ProcessSprite;
+      self.pic.Destroy();
+      self.pic := nil;
     end;
+    
+    property Text: string read buttonText write SetText;
   end;
   
   //##############-КОНЕЦ_ИНТЕРФЕЙС-#################
@@ -168,20 +200,14 @@ type
     end;
     
     function getFrameCount():integer;
-     begin
+    begin
        Result:= curAnim.frames.Length;
-     end;
-    
+    end;
+
     public
     ///Конструктор с инициализацией стандартной анимации с обычными параметрами
     constructor Create(x,y:integer; aname:string; frames:array of string);
     begin
-//      Visible := True;
-//      x := x * 48; y := y * 48;
-//      anims := new Dictionary<string, spriteInfo>();
-//      defaultAnim:=aname;
-//      AddAnim(aname, frames, 160, True); //Обычно анимация зациклена
-//      sprite := new PictureWPF(x,y,anims[defaultAnim].frames[0]);
       Create(x,y,aname, frames, 160, True);
     end;
     
@@ -444,9 +470,14 @@ property Pname: string Read Write ;
       for var i:=0 to enemyPoints.Count-1 do 
       begin
         result:= Round(Sqrt((enemyPoints[i].x - LAGD.Player.GetX)**2 + (enemyPoints[i].y - LAGD.Player.GetY)**2));
-        if (Result < Min) then min := Result;
+        if (Result < min) then min := Result;
       end;
       Writeln(min);
+    end;
+    
+    static procedure ClearEnemyPointsList();
+    begin
+      if (enemyPoints<>nil) then enemyPoints.Clear();
     end;
     
     procedure CreateEnemyPoint(ArrayEnemy: array of string; X,Y: integer);
@@ -706,6 +737,7 @@ property Pname: string Read Write ;
         pic.FontColor := Colors.White;
         pic.FontSize := 24;
         pic.TextAlignment := Alignment.Center;
+        pic.Visible := false;
       end);
     end;
     
@@ -811,6 +843,9 @@ property Pname: string Read Write ;
     LAGD.TransPic.Show(); //Включаем экран перехода
     if (LAGD.LevelPic = nil) then exit;
     LAGD.LevelPic.Destroy(); //Уничтожаем старое изображение уровня
+    writeln('1');
+    UseObject.ClearEnemyPointsList(); //Уничтожаем точки врагов
+    writeln('1');
     var t : levelGridArr; //
     LAGD.Grid := t; // Обнуляем таким образом сетку уровня
   end;
@@ -820,11 +855,6 @@ property Pname: string Read Write ;
   begin
     CloseLevel();
     LoadLevel(lname);
-  end;
-  
-  procedure MainMenu();
-  begin
-    
   end;
   
   procedure Escape();
@@ -840,16 +870,68 @@ property Pname: string Read Write ;
     LAGD.CombatPic := new PictureWPF(0, 0,'data\levels\LALevels\png\CombatField.png');
     ///По позиции игрока начинаем бой.
     LAGD.Grid[LAGD.Player.GetY,LAGD.Player.GetX].GridObject.StartBattle();
-     var b:= new LAButton(12*48, 10*48, 'img/ui/play.png', 'img/ui/playpress.png');
+     var b:= new LAButton(12*48, 10*48, 'play.png', 'playpress.png');
      b.OnClick += procedure() -> begin 
        for var i:=0 to BattleProcessor.EnemyList.Length-1 do
        BattleProcessor.EnemyList[i].death;
        Escape();
      end;
-     var BAttack:= new LAButton(12*48, 10*48, 'img/ui/play.png', 'img/ui/playpress.png');
-     BAttack.OnClick += procedure() -> begin 
-       
-     end;
+     var BAttack:= new LAButton(12*48, 10*48, 'play.png', 'playpress.png');
+     BAttack.OnClick += procedure() -> begin end;
   end; 
   
+  //РАЗДЕЛ ОПИСАНИЯ ГЛАВНОГО МЕНЮ
+  event DeleteButtons: procedure;
+  procedure DrawMainMenu();
+  var b_continue, b_startNew, b_rules, b_about, b_exit:LAButton;
+  begin
+    //Сначала СОЗДАЕМ кнопки. Только потом ПРИСВАИВАЕМ события!
+    //Создаем изображение перехода между уровнями.
+    if (LAGD.TransPic = nil) then LAGD.TransPic := new TransitionPic();
+    
+    var loader := new LALoader('data/userdata.json');
+    
+    b_continue := new LAButton(32, 694, 'rect_menu_wide.png', 'rect_menu_wide_click.png');
+    b_continue.Text := 'ПРОДОЛЖИТЬ'; 
+    
+    b_startNew := new LAButton(345, 694, 'rect_menu_wide.png', 'rect_menu_wide_click.png');
+    b_startNew.Text := 'НОВАЯ ИГРА';
+    
+    b_rules := new LAButton(656, 694, 'rect_menu_short.png', 'rect_menu_short_click.png');
+    b_rules.Text := 'ПРАВИЛА';
+   
+    b_about := new LAButton(864, 694, 'rect_menu_short.png', 'rect_menu_short_click.png');
+    b_about.Text := 'О ПРОЕКТЕ';
+
+    ///Завершает работу игры.
+    b_exit := new LAButton(1072, 694, 'rect_menu_short.png', 'rect_menu_short_click.png');
+    b_exit.Text := 'ВЫХОД';
+    
+    //Делегат, при вызове удаляет кнопки
+    var delButtons := procedure() -> begin
+      b_continue.Destroy(); 
+      b_startNew.Destroy();
+      b_rules.Destroy();
+      b_about.Destroy();
+      b_exit.Destroy();
+    end;
+    
+    b_continue.OnClick := procedure() -> begin
+      //Загружаем прогресс игрока
+      ChangeLevel(loader.GetValue&<string>('$.current_level'));
+      delButtons();
+    end;
+    
+    b_startNew.OnClick := procedure() -> begin
+      //Сбрасываем прогресс игрока
+      loader.SetValue('$.current_level', 'Level_0');
+      loader.SaveFile();
+      ChangeLevel(loader.GetValue&<string>('$.current_level'));
+      delButtons();
+    end;
+    
+    b_rules.OnClick := procedure() -> begin delButtons; end;
+    b_about.OnClick := procedure() -> begin end;
+    b_exit.OnClick := procedure() -> begin writeln('Игра закрыта!'); Halt; end;
+  end;
 end.
