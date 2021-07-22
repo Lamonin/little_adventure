@@ -358,8 +358,10 @@ type
   BattleProcessor = class
     private
       static ListEnemy: array of IBattleEntity;
+      static PPlayerBattle: IBattleEntity;
       static SLEnemy: IBattleEntity;
     public
+      static property PlayerBattle: IBattleEntity Read PPlayerBattle Write PPlayerBattle; 
       static property EnemyList: array of IBattleEntity Read ListEnemy Write ListEnemy;
       static property selectedEnemy: IBattleEntity Read SLEnemy Write SLEnemy;
   end;
@@ -375,23 +377,22 @@ type
      ///Нажатие на врага в бою
      procedure klik(x, y: real; mousebutton: integer);
      begin
-       if (mousebutton=1) and (Sprite.PtInside(x,y)) and not(ThisLock) then begin
-         Writeln(Pname);
-         if (BattleProcessor.SLEnemy<>nil) then
+       if (Sprite <> nil) and (mousebutton=1) and (Sprite.PtInside(x,y)) and not(ThisLock) then begin
+        if (BattleProcessor.SLEnemy<>nil) then
          begin
            BattleProcessor.SLEnemy.PicC.Destroy;        
            BattleProcessor.SLEnemy.ThisLock:= false;
          end;
-         writeln(Sprite.Pos);
-         PicC:= new PictureWPF(Sprite.Pos.X-20,Sprite.Pos.Y+50,'img\enemy\circle.png');
+         PicC:= new PictureWPF(Sprite.Pos.X-65,Sprite.Pos.Y+15,'img\enemy\circle.png');
          ThisLock:=true;
-         BattleProcessor.SLEnemy:=self;        
+         BattleProcessor.SLEnemy:=self; 
        end;
      end;
      
     public
      constructor Create();
      begin
+       Writeln('aboba');
        OnMouseDown += klik;
      end;
     
@@ -409,9 +410,10 @@ type
       begin
         hp -= Dmg;
         if (hp<=0) then Death();
+        WriteLn(Dmg);
       end;
       
-     procedure Attack(E: IBattleEntity);      
+     procedure Attack(E: IBattleEntity);virtual;      
       begin
         Sprite.PlayAnim('attack');
         E.Damage(AttackDmg);
@@ -425,8 +427,10 @@ type
    private 
    
    public
+   
    constructor Create(X, Y:integer);
    begin
+     hp:= 10;
      name := 'Skeleton';
      writeln(X,Y:10);
      Sprite:= new LSprite(X,Y,'Idle',LoadSprites('enemy\Skeleton_Seeker\idle', 6));
@@ -441,8 +445,10 @@ type
    private 
    
    public
+   
    constructor Create(X, Y:integer);
     begin
+     hp:=15;
      name := 'TreeEnemy';
      Sprite:= new LSprite(X,Y,'Idle',LoadSprites('enemy\Sprout\idle', 4));
      Sprite.AddAnim('Attack', LoadSprites('enemy\Sprout\attack', 6), 160, false);
@@ -451,7 +457,20 @@ type
     end;
    end;
   
- 
+  BattlePlayre = class(BattleEntity)
+  private
+  
+  public
+  constructor create();
+    begin
+    attackDmg:=5;
+    end;
+   procedure Attack(E: IBattleEntity);override;      
+      begin
+        if (E = nil) then exit;
+        E.Damage(AttackDmg);
+      end;
+  end;
   
   UseObject = class(IUseObject)
     private
@@ -881,14 +900,12 @@ type
     LAGD.CombatPic := new PictureWPF(0, 0,'data\levels\LALevels\png\CombatField.png');
     ///По позиции игрока начинаем бой.
     LAGD.Grid[LAGD.Player.GetY,LAGD.Player.GetX].GridObject.StartBattle();
+    if (BattleProcessor.PlayerBattle <> nil) then BattleProcessor.PlayerBattle.Destroy;
+    BattleProcessor.PlayerBattle:= new BattlePlayre;
      var b:= new LAButton(12*48, 10*48, 'play.png', 'playpress.png');
      b.OnClick += procedure() -> begin 
-       for var i:=0 to BattleProcessor.EnemyList.Length-1 do
-       BattleProcessor.EnemyList[i].death;
-       Escape();
+      battleprocessor.PlayerBattle.Attack(BattleProcessor.SLEnemy);
      end;
-     var BAttack:= new LAButton(12*48, 10*48, 'play.png', 'playpress.png');
-     BAttack.OnClick += procedure() -> begin end;
   end; 
   
   //РАЗДЕЛ ОПИСАНИЯ ГЛАВНОГО МЕНЮ
