@@ -330,7 +330,7 @@ type
     private
     static pplayer:IPlayerWorld;
     static llevelGrid:levelGridArr;
-    static llevelPicture, CCombatPic:PictureWPF;
+    static llevelPicture, CCombatPic, backgroundPic:PictureWPF;
     static ttransPic:ITransitionPic;
     public
     ///Персонаж игрока в обычном уровня
@@ -342,6 +342,7 @@ type
     ///Изображение боевого уровня
     static property CombatPic: PictureWPF read CCombatPic write CCombatPic;
     static property TransPic: ITransitionPic read ttransPic write ttransPic;
+    static property GetBackground: PictureWPF read backgroundPic write backgroundPic;
   end;
   
   IBattleEntity = interface
@@ -527,7 +528,7 @@ type
   UseObject = class(IUseObject)
     private
     typeObject:string;
-    static dialogBanner:RectangleWPF;
+    static dialogBanner:PictureWPF;
     messages:array of string;
     messageNum:integer;
     messageCount:integer;
@@ -614,7 +615,7 @@ type
       typeObject := 'message';
       self.messages := messages;
       if (dialogBanner = nil) then Redraw(procedure() -> begin
-        dialogBanner := new RectangleWPF(0,768-128,1296, 128, Colors.Blue);
+        dialogBanner := new PictureWPF(0,768-128,'img\ui\rect_game_big.png');
         dialogBanner.FontSize := 24;
         dialogBanner.FontColor := Colors.Yellow;
         dialogBanner.Visible := false;
@@ -665,7 +666,8 @@ type
   ///Класс игрока в "мире".
   PlayerWorld = class (IPlayerWorld)
     private
-    point, useRect:RectangleWPF; //Невидимое тело объекта
+    point:RectangleWPF; //Невидимое тело объекта
+    useRect:PictureWPF;
     position:record x,y:integer end;
     sprite:LSprite;
     moveTimer, updateSprite:Timer;
@@ -709,7 +711,7 @@ type
       position.x := x; position.y := y;
       point := new RectangleWPF(x*48, y*48, 4, 4, Colors.Black);
       point.Visible := false;
-      useRect := new RectangleWPF(x*48+12, y*48, 24, 24, Colors.Blue);
+      useRect := new PictureWPF(x*48+12, y*48, 'img\ui\rect_small.png');
       useRect.TextAlignment := Alignment.Center;
       useRect.FontColor := Colors.Yellow;
       useRect.FontSize := 18;
@@ -786,9 +788,7 @@ type
       if not LAGD.Grid[GetY+dy, GetX+dx].CanUse then exit;
       var obj := LAGD.Grid[GetY+dy, GetX+dx].GridObject;
       case obj.objType of
-        'message': begin
-          isUsing := obj.NextMessage();
-        end;
+        'message': isUsing := obj.NextMessage();
       end;
     end;
     
@@ -904,13 +904,13 @@ type
           var tt:= val[j]['fieldInstances'][0]['__value'].ToObject&<array of string>();
           cell.GridObject.CreateEnemyPoint(tt, x, y);
         end;
-        'TransitionMessage': begin
-          var tt:= val[j]['fieldInstances'][0]['__value'].ToString();
-          var p := new RectangleWPF(100, 100, 400, 100, Colors.Wheat);
-          p.Text := tt;
-          p.FontName := 'Promocyja';
-          p.TextAlignment := Alignment.Center;
-        end;
+//        'TransitionMessage': begin
+//          var tt:= val[j]['fieldInstances'][0]['__value'].ToString();
+//          var p := new RectangleWPF(100, 100, 400, 100, Colors.Wheat);
+//          p.Text := tt;
+//          p.FontName := 'Promocyja';
+//          p.TextAlignment := Alignment.Center;
+//        end;
       end;
       LAGD.Grid[y,x] := cell;
     end;
@@ -925,9 +925,7 @@ type
     LAGD.TransPic.Show(); //Включаем экран перехода
     if (LAGD.LevelPic = nil) then exit;
     LAGD.LevelPic.Destroy(); //Уничтожаем старое изображение уровня
-    writeln('1');
     UseObject.ClearEnemyPointsList(); //Уничтожаем точки врагов
-    writeln('1');
     var t : levelGridArr; //
     LAGD.Grid := t; // Обнуляем таким образом сетку уровня
   end;
@@ -941,7 +939,6 @@ type
   
   procedure Escape();
   begin
-       
       // LAGD.CombatPic.Destroy();
        LAGD.Player.isBlocked:= false;
   end;
@@ -1042,6 +1039,7 @@ type
       //Загружаем прогресс игрока
       ChangeLevel(loader.GetValue&<string>('$.current_level'));
       delButtons();
+      LAGD.backgroundPic.Destroy();
     end;
     
     b_startNew.OnClick := procedure() -> begin
@@ -1051,6 +1049,7 @@ type
         loader.SetValue('$.current_level', 'Level_0');
         loader.SaveFile();
         ChangeLevel(loader.GetValue&<string>('$.current_level'));
+        LAGD.backgroundPic.Destroy();
       end, 
       procedure() -> begin
         DrawMainMenu();
@@ -1069,6 +1068,7 @@ type
     Window.IsFixedSize := True;
     Window.SetSize(1296, 768);
     Window.CenterOnScreen();
+    LAGD.backgroundPic := new PictureWPF(0,0, 'data\levels\LALevels\png\MainMenuField.png');   
     //Сначала СОЗДАЕМ кнопки. Только потом ПРИСВАИВАЕМ события!
     //Создаем изображение перехода между уровнями.
     if (LAGD.TransPic = nil) then LAGD.TransPic := new TransitionPic();
