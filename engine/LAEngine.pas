@@ -1,8 +1,7 @@
 ﻿unit LAEngine;
 {$reference Newtonsoft.Json.dll}
 uses Newtonsoft.Json.Linq;
-uses GraphWPF, WPFObjects, Timers;
-uses Misc;
+uses GraphWPF, WPFObjects, Timers, Misc;
 
 procedure CombatField(); forward;
 
@@ -143,7 +142,6 @@ type
     curAnim:spriteInfo; //Текущая анимация
     sprite:PictureWPF;
     position:Point;
-    
     updater:Timer;
     frameNum:Integer; //Номер текущего кадра анимации
     isVisible:boolean;
@@ -151,8 +149,9 @@ type
     procedure ChangeSprite();
     begin
       Redraw(procedure()-> begin
+        var p := sprite.LeftTop;
         sprite.Destroy();
-        sprite:= new PictureWPF(position, curAnim.frames[frameNum]);
+        sprite:= new PictureWPF(p, curAnim.frames[frameNum]);
       end);
       sprite.Visible := isVisible;
     end;
@@ -166,15 +165,21 @@ type
       ChangeSprite();
     end;
     
-    procedure SetPos(pos:Point);
+    function GetPos():Point;
     begin
-      pos.X += 24 - sprite.Width / 2;
-      pos.Y -= sprite.Height - 24;
-      sprite.MoveTo(pos.X, pos.Y);
-      position := pos;
+      if (sprite <> nil) then
+        Result := sprite.Center;
     end;
     
-    function getFrameCount():integer;
+    ///Устанавливает позицию спрайта
+    procedure SetPos(pos:Point);
+    begin
+      position := pos;
+      pos.X += 24;
+      sprite.Center := pos;
+    end;
+    
+    function GetFrameCount():integer;
     begin
        Result:= curAnim.frames.Length;
     end;
@@ -193,10 +198,11 @@ type
       position.x := x * 48; position.y := y * 48;     
       anims := new Dictionary<string, spriteInfo>();
       AddAnim(aname, frames, speed, looped);
-      sprite := new PictureWPF(x,y,anims[aname].frames[0]);
+      sprite := new PictureWPF(position, anims[aname].frames[0]);
       SetPos(position);
     end;
    
+    ///Принадлежит ли точка спрайту
     function PtInside(x,y:Real):boolean;
     begin
       result := Misc.PtInside(X,Y,sprite);
@@ -232,7 +238,7 @@ type
     end;
     
     ///Устанавливает позицию спрайта
-    property Pos: Point Read position write SetPos;
+    property Pos: Point Read GetPos write SetPos;
     ///Количество фреймов текущей анимации
     property CurrentFrameCount: Integer Read getFrameCount;
     ///Видимость спрайта
@@ -365,20 +371,19 @@ type
      end;
     
      procedure Destroy();
-      begin
-      Sprite.Destroy;  
-      end;
+     begin
+      Sprite.Destroy;
+     end;
       
-      procedure Death();
-       begin
-         Sprite.PlayAnim('Death');
-       end;
+     procedure Death();
+     begin
+      Sprite.PlayAnim('Death');
+     end;
       
      procedure Damage(Dmg: integer);
       begin
-        hp-=Dmg;
-        if (hp<=0) then
-          Death();
+        hp -= Dmg;
+        if (hp<=0) then Death();
       end;
       
      procedure Attack(E: IBattleEntity);      
@@ -398,6 +403,7 @@ type
    constructor Create(X, Y:integer);
    begin
      name := 'Skeleton';
+     writeln(X,Y:10);
      Sprite:= new LSprite(X,Y,'Idle',LoadSprites('enemy\Skeleton_Seeker\idle', 6));
      Sprite.AddAnim('Attack', LoadSprites('enemy\Skeleton_Seeker\death', 5), 160, false);
      Sprite.AddAnim('Death', LoadSprites('enemy\Skeleton_Seeker\death', 5), 160, false);
