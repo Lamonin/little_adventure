@@ -20,14 +20,17 @@ begin
   p.Destroy();
 end;
 
-///Умножает цвет объекта на mult, делая его ярче/темнее.
-procedure Tint(var obj:ObjectWPF; mult:real);
+procedure ApplyFontSettings<T>(var obji:T);
+  where T:ObjectWPF;
 begin
-  var c := obj.Color;
-  var R := round(c.R*mult); if R>255 then R:= 255 else if R<0 then R := 0;
-  var G := round(c.G*mult); if G>255 then G:= 255 else if G<0 then G := 0;
-  var B := round(c.B*mult); if B>255 then B:= 255 else if B<0 then B := 0;
-  obj.Color := ARGB(255, R, G, B);  
+  var obj := obji;
+  Redraw(procedure()-> begin
+    obj.FontName := 'GranaPadano';
+    obj.FontColor := ARGB(255, 255, 214, 0);
+    obj.FontSize := 32;
+    obj.TextAlignment := Alignment.Center;
+  end);
+  obji := obj;
 end;
 
 type
@@ -74,6 +77,7 @@ type
       WriteAllText(path,jObj.ToString(), Encoding.UTF8);
     end;
   end;
+  
   //##############-НАЧАЛО_ИНТЕРФЕЙС-################
   ///Пример использования:
   ///var b:= new LAButton(100, 200, 'img/ui/play.png', 'img/ui/playpress.png');
@@ -113,10 +117,7 @@ type
     begin
       if (buttonText = '') or (pic = nil) then exit;
       pic.Text := buttonText;
-      pic.FontName := 'GranaPadano';
-      pic.FontColor := ARGB(255, 255, 214, 0);
-      pic.FontSize := 32;
-      pic.TextAlignment := Alignment.Center;
+      ApplyFontSettings(pic);
     end;
     
     procedure SetText(t:string);
@@ -156,9 +157,10 @@ type
   
   //##############-НАЧАЛО_СПРАЙТЫ-################
   spriteInfo=record
-    frames:array of string; //Кадры анимации
-    speed:integer; //Скорость анимации
-    isLoop:boolean; //Зациклена ли анимация
+    frames:array of string; //Кадры анимации.
+    speed:integer; //Скорость анимации.
+    isLoop:boolean; //Зациклена ли анимация.
+    NextAnim:procedure; //Имеет смысл только если анимация не зациклена.
   end;
   
   LSprite = class
@@ -177,6 +179,7 @@ type
         var p := sprite.LeftTop;
         sprite.Destroy();
         sprite:= new PictureWPF(p, curAnim.frames[frameNum]);
+        SetPos(position);
       end);
       sprite.Visible := isVisible;
     end;
@@ -186,14 +189,19 @@ type
     begin
       if (frameNum<curAnim.frames.Length-1) then frameNum+=1
       else if curAnim.isLoop then frameNum:=0
-      else begin updater.Stop(); exit; end;
+      else begin 
+        updater.Stop(); 
+        if (curAnim.NextAnim<>nil) then curAnim.NextAnim;
+        exit; 
+      end;
       ChangeSprite();
     end;
     
     function GetPos():Point;
     begin
       if (sprite <> nil) then
-        Result := sprite.Center;
+        Result := sprite.Center
+      else Result := position;
     end;
     
     ///Устанавливает позицию спрайта
@@ -234,10 +242,10 @@ type
     end;
     
     ///Добавляет новую анимацию с именем aname
-    procedure AddAnim(aname:string; frames:array of string; speed:integer; looped:boolean);
+    procedure AddAnim(aname:string; frames:array of string; speed:integer; looped:boolean; nextAnim:procedure:=nil);
     begin
       var frame:spriteInfo;
-      frame.frames:= frames; frame.speed:=speed; frame.isLoop:=looped;
+      frame.frames:= frames; frame.speed:=speed; frame.isLoop:=looped; frame.NextAnim:= nextAnim;
       anims.Add(aname, frame);
     end;
     
@@ -304,6 +312,7 @@ type
     function NextMessage():boolean;
     property objType: string read;
     property NextLevelName: string read;
+    property ePointVisible: boolean write;
   end;
   
   IPlayerWorld = interface
@@ -362,62 +371,72 @@ type
   BattleProcessor = class
     private
       static CombatTimer: Timer;
-      static Stoptimer, waitplayer: boolean;
-      static ListEnemy: list<IBattleEntity>;
+      static Stoptimer, isPlayerTurn: boolean;
+      static ListEnemy: List<IBattleEntity>;
       static PPlayerBattle: IBattleEntity;
       static SLEnemy: IBattleEntity;
+      static BattleEnemyPanel : PictureWPF;
     public
     
-    static procedure ProcessAtack(ActionList: list<IBattleEntity>);
+    static procedure ProcessAttack(ActionList: List<IBattleEntity>);
     begin
-    var ProccesTimer : Timer;
+    var ProcessTimer : Timer;
     var I:= 0;
-    ProccesTimer := new Timer(100,procedure() -> begin 
-      if waitplayer then exit;
+    ProcessTimer := new Timer(100,procedure() -> begin 
+      if isPlayerTurn then exit;
       if I = ActionList.Count then begin
-        ProccesTimer.Stop;
+        ProcessTimer.Stop;
         Stoptimer:=false;
         exit;
       end;
-      if ActionList[I] = PPlayerBattle then begin waitplayer:= true; Writeln('hod igr') end;
-      ProccesTimer.Interval:= ActionList[I].GetDelay;
-      ActionList[i].Attack(PPlayerBattle);
+      ProcessTimer.Interval:= ActionList[I].GetDelay;
+      
+      //Ходит игрок
+      if ActionList[I].Pname = 'Player' then begin 
+        isPlayerTurn:= true; 
+        Writeln('Ход игрока'); 
+        I+=1;
+        exit; 
+      end;
+      ActionList[I].Attack(PPlayerBattle);
       I+=1;
      end);
-     ProccesTimer.Start;
+     ProcessTimer.Start;
     end;
      
-     static procedure StartBattle();
-        begin
-        CombatTimer := new Timer(250, procedure() ->
+      static procedure StartBattle();
       begin
-          if (stopTimer) then exit;
-          var ActionList:= new List<IBattleEntity>();
-          
-        foreach var t in ListEnemy do 
-        begin
-         if t.AddAction() then ActionList.Add(t);                 
-        end;
+      BattleEnemyPanel:= new PictureWPF(167, 616, 'img\ui\rect_panel_battle.png');
+      ApplyFontSettings(BattleEnemyPanel);
+      
+      foreach var t in ListEnemy do begin
+        BattleEnemyPanel.Text += t.Pname + '  |  ';
+      end;
+      BattleEnemyPanel.Text.TrimEnd('  |  '.ToCharArray());
+      CombatTimer := new Timer(250, procedure() ->
+      begin
+        if (stopTimer) then exit;
+        var ActionList:= new List<IBattleEntity>();
+        foreach var t in ListEnemy do if t.AddAction() then ActionList.Add(t);                 
         if PPlayerBattle.AddAction() then ActionList.Add(PPlayerBattle);
-         if (ActionList.Count>0) then
-         begin       
-           Stoptimer:= true;
-           ProcessAtack(ActionList);
-         end;
-      end);
-        CombatTimer.Start;
+        if (ActionList.Count>0) then
+        begin       
+          Stoptimer:= true;
+          ProcessAttack(ActionList);
+        end; end);
+        CombatTimer.Start();
         end;
-      static property PlayerStep: boolean Read waitplayer write waitplayer;
+      static property PBattleEnemyPanel: PictureWPF read BattleEnemyPanel write BattleEnemyPanel;
+      static property PlayerStep: boolean Read isPlayerTurn write isPlayerTurn;
       static property PlayerBattle: IBattleEntity Read PPlayerBattle Write PPlayerBattle; 
-      static property EnemyList: list<IBattleEntity> Read ListEnemy Write ListEnemy;
+      static property EnemyList: List<IBattleEntity> Read ListEnemy Write ListEnemy;
       static property selectedEnemy: IBattleEntity Read SLEnemy Write SLEnemy;
   end;
 
   BattleEntity = class(IBattleEntity) 
     private
-    Delay : integer;
      name: string;
-     hp, attackDmg, agility, actionPoint : integer;
+     hp, attackDmg, agility, actionPoint, delay : integer;
      Sprite : LSprite;
      LockThis : boolean;
      CPic: PictureWPF;
@@ -455,21 +474,22 @@ type
     
      procedure Destroy();
      begin
-       BattleProcessor.EnemyList.Remove(self);
       Sprite.Destroy;
-     OnMouseDown -= klik;
+      OnMouseDown -= klik;
      end;
       
      procedure Death();virtual;
      begin
       Sprite.PlayAnim('Death');
-      Destroy();
+      BattleProcessor.EnemyList.Remove(self);
+      //Destroy();
      end;
       
      procedure Damage(Dmg: integer);virtual;
       begin
         hp -= Dmg;
-        if (hp<=0) then Death();
+        if (hp<=0) then Death()
+        else Sprite.PlayAnim('Hit');
       end;
       
      procedure Attack(E: IBattleEntity);virtual;      
@@ -477,7 +497,6 @@ type
         if (E = nil) or (E.GetHP <=0) then exit;
         E.Damage(AttackDmg);
         Sprite.PlayAnim('Attack');
-        
       end; 
       property GetDelay: integer Read delay;
       property GetHP: integer Read hp;
@@ -497,10 +516,16 @@ type
      agility:=3;
      hp:= 10;
      name := 'Skeleton';
-     Delay:= 3000;
-     writeln(X,Y:10);
+     Delay:= 2000;
      Sprite:= new LSprite(X,Y,'Idle',LoadSprites('enemy\Skeleton_Seeker\idle', 6));
-     Sprite.AddAnim('Attack', LoadSprites('enemy\Skeleton_Seeker\spawn', 11), 160, false);
+     Sprite.AddAnim('Hit', LoadSprites('enemy\Skeleton_Seeker\hit', 4), 160, false, procedure()->
+     begin
+       sprite.PlayAnim('Idle'); 
+     end);
+     Sprite.AddAnim('Attack', LoadSprites('enemy\Skeleton_Seeker\attack', 10), 160, false, procedure()->
+     begin
+      sprite.PlayAnim('Idle'); 
+     end);
      Sprite.AddAnim('Death', LoadSprites('enemy\Skeleton_Seeker\death', 5), 160, false);
      Sprite.PlayAnim('Idle');
    end;
@@ -520,54 +545,63 @@ type
      name := 'TreeEnemy';
      Delay:= 2000;
      Sprite:= new LSprite(X,Y,'Idle',LoadSprites('enemy\Sprout\idle', 4));
-     Sprite.AddAnim('Attack', LoadSprites('enemy\Sprout\attack', 6), 160, false);
+     Sprite.AddAnim('Hit', LoadSprites('enemy\Sprout\hit', 5), 160, false, procedure()->
+     begin
+       sprite.PlayAnim('Idle'); 
+     end);
+     Sprite.AddAnim('Attack', LoadSprites('enemy\Sprout\attack', 6), 160, false, procedure()->begin
+       Sprite.PlayAnim('Idle'); 
+     end);
      Sprite.AddAnim('Death', LoadSprites('enemy\Sprout\death', 8), 160, false);
      Sprite.PlayAnim('Idle');
     end;
    end;
   
-  BattlePlayre = class(BattleEntity)
+  BattlePlayer = class(BattleEntity)
   private
   
   public
   constructor create();
-    begin
+  begin
     hp:=100;
     attackDmg:=5;
-    agility:=6;
+    agility:=4;
     name:= 'Player';
     Delay:= 250;
-    end;
-   procedure Attack(E: IBattleEntity);override;      
-      begin
-        if (E = nil) then exit;
-        E.Damage(AttackDmg);
-      end;
-      
-    procedure Death();override;
-     begin
-      Writeln('Babah');
-     end;
-      
-     procedure Damage(Dmg: integer);override;
-      begin
-        hp -= Dmg;
-        if (hp<=0) then Death();
-      end;
   end;
-  
-  
+   procedure Attack(E: IBattleEntity);override;      
+  begin
+    if (E = nil) then exit;
+    E.Damage(AttackDmg);
+  end;
+      
+  procedure Death();override;
+  begin
+    Writeln('Babah');
+  end;
+      
+  procedure Damage(Dmg: integer);override;
+  begin
+    hp -= Dmg;
+    if (hp<=0) then Death();
+  end;
+  end;
+
   UseObject = class(IUseObject)
     private
     typeObject:string;
     static dialogBanner:PictureWPF;
-    messages:array of string;
-    messageNum:integer;
-    messageCount:integer;
+    messageNum, messageCount:integer;
     levelName:string;
     messageTimer:Timer;
-    EnemyPoint:array of string;
+    messages, EnemyPoint:array of string;
     static enemyPoints:List<Point>;
+    ePointAnim:LSprite;
+    
+    procedure SetVisible(t:boolean);
+    begin
+      if (ePointAnim<>nil) then ePointAnim.Visible := t;
+    end;
     
     public 
     static constructor();
@@ -578,15 +612,18 @@ type
     ///Рассчитываем расстояние до точек начала боя
     ///выбираем самое короткое из них.
     static function CalculateEnemyPoint():integer;
-    var min:integer;
+    var min:integer; minPoint:Point;
     begin
       min:= 100;
       if (enemyPoints.Count<=0) then exit;
       for var i:=0 to enemyPoints.Count-1 do 
       begin
         result:= Round(Sqrt((enemyPoints[i].x - LAGD.Player.GetX)**2 + (enemyPoints[i].y - LAGD.Player.GetY)**2));
-        if (Result < min) then min := Result;
+        LAGD.Grid[floor(enemyPoints[i].y),floor(enemyPoints[i].x)].GridObject.ePointVisible := false;
+        if (Result < min) then begin min := Result; minPoint:= enemyPoints[i]; end;
       end;
+      if (min<2) then
+        LAGD.Grid[floor(minPoint.Y),floor(minPoint.X)].GridObject.ePointVisible := true;
       Writeln(min);
     end;
     
@@ -597,19 +634,23 @@ type
     
     procedure CreateEnemyPoint(ArrayEnemy: array of string; X,Y: integer);
     begin
-      writeln(ArrayEnemy);
       typeObject := 'EnemyPoint';
       EnemyPoint := ArrayEnemy;
-      var p : GPoint;
-      P.X :=X;
-      p.Y :=Y;
+      ePointAnim := new LSprite(x,y,'idle', LoadSprites('blue_fire',8));
+      var p:Point; p.X := x*48; p.Y := Y*48 + 24;
+      ePointAnim.Pos := p;
+      ePointAnim.Visible := false;
+      ePointAnim.PlayAnim('idle');
+      
+      P.X := X;
+      p.Y := Y;
       enemyPoints.add(p);
     end;
     
     ///Начало битвы, спавн врагов
     procedure StartBattle();
     begin
-      BattleProcessor.EnemyList:= new list<IBattleEntity>();
+      BattleProcessor.EnemyList:= new List<IBattleEntity>();
       for var i:= 0 to EnemyPoint.Length-1 do
        begin
         case (i+1) of
@@ -693,6 +734,7 @@ type
     property objType: string read typeObject;
     ///Возвращает название уровня на который ведет этот объект
     property NextLevelName: string read levelName;
+    property ePointVisible: boolean write SetVisible;
   end;
   
   ///Класс игрока в "мире".
@@ -710,6 +752,8 @@ type
     begin
       self.blocked := blocked;
       sprite.Visible := not blocked;
+      if (LAGD.Grid[GetY, GetX].GridObject <> nil) and (LAGD.Grid[GetY, GetX].GridObject.objType = 'EnemyPoint') then
+        LAGD.Grid[GetY, GetX].GridObject.ePointVisible := false;
     end;
     
     //Проверяет можно ли использовать клетку на которую смотрит персонаж
@@ -767,8 +811,10 @@ type
       //*************************
       
       //Обновляем позицию визуального представления игрока
-      updateSprite := new Timer(10,procedure() -> begin
-        sprite.Pos := point.LeftTop;
+      updateSprite := new Timer(10, procedure() -> begin
+        var p := point.LeftTop;
+        p.Y+=12;
+        sprite.Pos := p;
         useRect.MoveTo(point.LeftTop.x+12, point.LeftTop.y-48);
       end);
       updateSprite.Start();
@@ -982,17 +1028,24 @@ type
     ///По позиции игрока начинаем бой.
     LAGD.Grid[LAGD.Player.GetY,LAGD.Player.GetX].GridObject.StartBattle();
     if (BattleProcessor.PlayerBattle <> nil) then BattleProcessor.PlayerBattle.Destroy;
-    BattleProcessor.PlayerBattle:= new BattlePlayre;
-     var b:= new LAButton(12*48, 10*48, 'play.png', 'playpress.png');
-     b.OnClick += procedure() -> begin 
-       if (BattleProcessor.PlayerStep) and (BattleProcessor.selectedEnemy<> nil) then
-          begin BattleProcessor.PlayerStep:= false;
-          battleprocessor.PlayerBattle.Attack(BattleProcessor.SLEnemy);
-          BattleProcessor.selectedEnemy.PicC.Destroy;
-          BattleProcessor.selectedEnemy.ThisLock:= false;
-          BattleProcessor.selectedEnemy:=nil;
-          end;          
-       end;
+      BattleProcessor.PlayerBattle:= new BattlePlayer;
+     var b_attack:= new LAButton(167, 692, 'rect_button_battle.png', 'rect_button_battle_click.png');
+     b_attack.Text := 'АТАКА';
+     b_attack.OnClick += procedure() -> begin 
+     if (BattleProcessor.PlayerStep) and (BattleProcessor.selectedEnemy<> nil) then
+        begin BattleProcessor.PlayerStep:= false;
+        battleprocessor.PlayerBattle.Attack(BattleProcessor.SLEnemy);
+        BattleProcessor.selectedEnemy.PicC.Destroy;
+        BattleProcessor.selectedEnemy.ThisLock:= false;
+        BattleProcessor.selectedEnemy:=nil;
+        end;        
+     end;
+     
+     var b_items:= new LAButton(494, 692, 'rect_button_battle.png', 'rect_button_battle_click.png');
+     b_items.Text := 'ПРЕДМЕТЫ';
+     var b_run:= new LAButton(820, 692, 'rect_button_battle.png', 'rect_button_battle_click.png');
+     b_run.Text := 'ПОБЕГ';
+
      BattleProcessor.StartBattle();
   end; 
   
