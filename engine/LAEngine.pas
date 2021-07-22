@@ -258,7 +258,7 @@ type
     end;
     
     ///Устанавливает позицию спрайта
-    property Pos: Point write SetPos;
+    property Pos: Point Read position write SetPos;
     property CurrentFrameCount: Integer Read getFrameCount;
     ///Видимость спрайта
     property Visible: boolean write isVisible read isVisible;
@@ -345,6 +345,7 @@ procedure Damage(Dmg: integer);
 procedure Attack(E: IBattleEntity); 
 property ThisLock: Boolean Read Write;   
 property Pname: string Read Write ;
+property PicC: PictureWPF Read Write;
  end;
 
 
@@ -361,21 +362,26 @@ property Pname: string Read Write ;
 
   BattleEntity = class(IBattleEntity) 
     private
-    name: string;
+     name: string;
      hp : integer;
      AttackDmg : integer;
      agility : integer;
      ActionPoint : integer;
      Sprite : LSprite;
      LockThis :boolean;
+     CPic: PictureWPF;
      procedure klik(x, y: real; mousebutton: integer);
      begin
        if (mousebutton=1) and (Sprite.PtInside(x,y)) and not(ThisLock) then begin
          Writeln(Pname);
          if (BattleProcessor.SLEnemy<>nil) then
-           BattleProcessor.SLEnemy.ThisLock:= false;
+         begin
+         BattleProcessor.SLEnemy.PicC.Destroy;        
+         BattleProcessor.SLEnemy.ThisLock:= false;
+         end;
+         PicC:= new PictureWPF(Sprite.Pos.X-20,Sprite.Pos.Y+50,'img\enemy\circle.png');
          ThisLock:=true;
-         BattleProcessor.SLEnemy:=self;
+         BattleProcessor.SLEnemy:=self;        
        end;
      end;
      
@@ -409,6 +415,7 @@ property Pname: string Read Write ;
       end; 
       property Pname: string Read name Write name;
       property ThisLock: Boolean Read LockThis Write LockThis;
+      property PicC: PictureWPF Read CPic Write CPic;
   end;
   
   SkeletonEnemy = class(BattleEntity)
