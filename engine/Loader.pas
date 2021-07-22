@@ -10,17 +10,19 @@ begin
   if (fonts.Length = 0) then exit;
   for var i := 0 to fonts.Length-1 do
     if not System.IO.File.Exists('C:\Windows\Fonts\'+fonts[i]+'.ttf') then begin
-      System.IO.File.Copy('fonts\'+fonts[i]+'.ttf', 'C:\Windows\Fonts\'+fonts[i]+'.ttf');
+      try 
+        System.IO.File.Copy('fonts\'+fonts[i]+'.ttf', 'C:\Windows\Fonts\'+fonts[i]+'.ttf');
+      except
+        writeln('Шрифт не установлен! Ошибка!');
+        exit;
+      end;
+      
       var info := new ProcessStartInfo('engine\FontReg.exe', '/copy');
       info.UseShellExecute := true;
       info.WindowStyle := ProcessWindowStyle.Hidden;
       info.Verb := 'runas';
-      try
-        System.Diagnostics.Process.Start(info);
-        writeln('Шрифт ', fonts[i] ,' загружен и установлен!');
-      except
-        writeln('Шрифт не установлен! Ошибка!');
-      end;
+      System.Diagnostics.Process.Start(info);
+      writeln('Шрифт ', fonts[i] ,' загружен и установлен!');
     end;
 end;
 
