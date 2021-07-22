@@ -2,31 +2,7 @@
 {$reference Newtonsoft.Json.dll}
 uses Newtonsoft.Json.Linq;
 uses GraphWPF, WPFObjects, Timers;
-
-///Проверяет - принадлежит ли точка прямоугольнику объекта
-function PtInside(x,y:real; obj:ObjectWPF):boolean;
-begin
-  if (x>obj.LeftTop.X) and (x<obj.RightTop.X) and (y>obj.LeftTop.Y) and (y<obj.RightBottom.Y) then
-  Result:=True;
-end;
-
-///Меняет изображение from на изображение из файла по пути too.
-procedure ChangePicture(var from:PictureWPF; too:string);
-begin
-  var p := from;
-  from := new PictureWPF(p.LeftTop, too);
-  p.Destroy();
-end;
-
-///Умножает цвет объекта на mult, делая его ярче/темнее.
-procedure Tint(var obj:ObjectWPF; mult:real);
-begin
-  var c := obj.Color;
-  var R := round(c.R*mult); if R>255 then R:= 255 else if R<0 then R := 0;
-  var G := round(c.G*mult); if G>255 then G:= 255 else if G<0 then G := 0;
-  var B := round(c.B*mult); if B>255 then B:= 255 else if B<0 then B := 0;
-  obj.Color := ARGB(255, R, G, B);  
-end;
+uses Misc;
 
 procedure CombatField(); forward;
 
@@ -164,7 +140,6 @@ type
   LSprite = class
     private
     anims:Dictionary<string, spriteInfo>; //Все анимации по их именам
-    defaultAnim:string; //Имя стандартной анимации
     curAnim:spriteInfo; //Текущая анимация
     sprite:PictureWPF;
     position:Point;
@@ -217,15 +192,14 @@ type
       Visible := True;
       position.x := x * 48; position.y := y * 48;     
       anims := new Dictionary<string, spriteInfo>();
-      defaultAnim:=aname;
       AddAnim(aname, frames, speed, looped);
-      sprite := new PictureWPF(x,y,anims[defaultAnim].frames[0]);
+      sprite := new PictureWPF(x,y,anims[aname].frames[0]);
       SetPos(position);
     end;
    
     function PtInside(x,y:Real):boolean;
     begin
-      result := LAEngine.PtInside(X,Y,sprite);
+      result := Misc.PtInside(X,Y,sprite);
     end;
     
     ///Добавляет новую анимацию с именем aname
@@ -259,6 +233,7 @@ type
     
     ///Устанавливает позицию спрайта
     property Pos: Point Read position write SetPos;
+    ///Количество фреймов текущей анимации
     property CurrentFrameCount: Integer Read getFrameCount;
     ///Видимость спрайта
     property Visible: boolean write isVisible read isVisible;
@@ -337,17 +312,17 @@ type
     static property CombatPic: PictureWPF read CCombatPic write CCombatPic;
     static property TransPic: ITransitionPic read ttransPic write ttransPic;
   end;
-  //КОНЕЦ ОПИСАНИЯ ИНТЕРФЕЙСНОЙ ЧАСТ
-IBattleEntity = interface
-procedure Destroy();
-procedure Death();
-procedure Damage(Dmg: integer);
-procedure Attack(E: IBattleEntity); 
-property ThisLock: Boolean Read Write;   
-property Pname: string Read Write ;
-property PicC: PictureWPF Read Write;
- end;
-
+  
+  IBattleEntity = interface
+    procedure Destroy();
+    procedure Death();
+    procedure Damage(Dmg: integer);
+    procedure Attack(E: IBattleEntity); 
+    property ThisLock: Boolean Read Write;   
+    property Pname: string Read Write ;
+    property PicC: PictureWPF Read Write;
+  end;
+  //КОНЕЦ ОПИСАНИЯ ИНТЕРФЕЙСНОЙ ЧАСТИ
 
   BattleProcessor = class
     private
@@ -356,29 +331,27 @@ property PicC: PictureWPF Read Write;
     public
       static property EnemyList: array of IBattleEntity Read ListEnemy Write ListEnemy;
       static property selectedEnemy: IBattleEntity Read SLEnemy Write SLEnemy;
-      
-     
   end;
 
   BattleEntity = class(IBattleEntity) 
     private
      name: string;
-     hp : integer;
-     AttackDmg : integer;
-     agility : integer;
-     ActionPoint : integer;
+     hp, attackDmg, agility, actionPoint : integer;
      Sprite : LSprite;
-     LockThis :boolean;
+     LockThis : boolean;
      CPic: PictureWPF;
+     
+     ///Нажатие на врага в бою
      procedure klik(x, y: real; mousebutton: integer);
      begin
        if (mousebutton=1) and (Sprite.PtInside(x,y)) and not(ThisLock) then begin
          Writeln(Pname);
          if (BattleProcessor.SLEnemy<>nil) then
          begin
-         BattleProcessor.SLEnemy.PicC.Destroy;        
-         BattleProcessor.SLEnemy.ThisLock:= false;
+           BattleProcessor.SLEnemy.PicC.Destroy;        
+           BattleProcessor.SLEnemy.ThisLock:= false;
          end;
+         writeln(Sprite.Pos);
          PicC:= new PictureWPF(Sprite.Pos.X-20,Sprite.Pos.Y+50,'img\enemy\circle.png');
          ThisLock:=true;
          BattleProcessor.SLEnemy:=self;        

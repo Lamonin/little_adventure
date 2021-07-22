@@ -1,7 +1,5 @@
-﻿program summer_practice;
-uses GraphWPF, WPFObjects;
+﻿uses GraphWPF, WPFObjects;
 uses LAEngine in 'engine/LAEngine.pas';
-uses Loader in 'engine/Loader.pas';
 
 //Процедура вызывается каждый раз при отрисовке
 procedure OnDraw(dt:real);
