@@ -1106,9 +1106,7 @@ type
     Window.IsFixedSize := True;
     Window.SetSize(1296, 768);
     Window.CenterOnScreen();
-    LAGD.backgroundPic := new PictureWPF(0,0, 'data\levels\LALevels\png\MainMenuField.png');   
-    //Сначала СОЗДАЕМ кнопки. Только потом ПРИСВАИВАЕМ события!
-    //Создаем изображение перехода между уровнями.
+    LAGD.backgroundPic := new PictureWPF(0,0, 'data\levels\LALevels\png\MainMenuField1.png');   
     if (LAGD.TransPic = nil) then LAGD.TransPic := new TransitionPic();
     DrawMainMenu();
   end;
