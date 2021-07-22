@@ -362,8 +362,8 @@ type
   BattleProcessor = class
     private
       static CombatTimer: Timer;
-      static Stoptimer: boolean;
-      static ListEnemy: array of IBattleEntity;
+      static Stoptimer, waitplayer: boolean;
+      static ListEnemy: list<IBattleEntity>;
       static PPlayerBattle: IBattleEntity;
       static SLEnemy: IBattleEntity;
     public
@@ -373,14 +373,14 @@ type
     var ProccesTimer : Timer;
     var I:= 0;
     ProccesTimer := new Timer(100,procedure() -> begin 
+      if waitplayer then exit;
       if I = ActionList.Count then begin
         ProccesTimer.Stop;
         Stoptimer:=false;
         exit;
       end;
-      Writeln('attack');
+      if ActionList[I] = PPlayerBattle then begin waitplayer:= true; Writeln('hod igr') end;
       ProccesTimer.Interval:= ActionList[I].GetDelay;
-      Writeln(ProccesTimer.Interval);
       ActionList[i].Attack(PPlayerBattle);
       I+=1;
      end);
@@ -398,6 +398,7 @@ type
         begin
          if t.AddAction() then ActionList.Add(t);                 
         end;
+        if PPlayerBattle.AddAction() then ActionList.Add(PPlayerBattle);
          if (ActionList.Count>0) then
          begin       
            Stoptimer:= true;
@@ -406,8 +407,9 @@ type
       end);
         CombatTimer.Start;
         end;
+      static property PlayerStep: boolean Read waitplayer write waitplayer;
       static property PlayerBattle: IBattleEntity Read PPlayerBattle Write PPlayerBattle; 
-      static property EnemyList: array of IBattleEntity Read ListEnemy Write ListEnemy;
+      static property EnemyList: list<IBattleEntity> Read ListEnemy Write ListEnemy;
       static property selectedEnemy: IBattleEntity Read SLEnemy Write SLEnemy;
   end;
 
@@ -453,12 +455,15 @@ type
     
      procedure Destroy();
      begin
+       BattleProcessor.EnemyList.Remove(self);
       Sprite.Destroy;
+     OnMouseDown -= klik;
      end;
       
      procedure Death();virtual;
      begin
       Sprite.PlayAnim('Death');
+      Destroy();
      end;
       
      procedure Damage(Dmg: integer);virtual;
@@ -527,11 +532,11 @@ type
   public
   constructor create();
     begin
-    hp:=20;
+    hp:=100;
     attackDmg:=5;
-    agility:=2;
+    agility:=6;
     name:= 'Player';
-    Delay:= 1000;
+    Delay:= 250;
     end;
    procedure Attack(E: IBattleEntity);override;      
       begin
@@ -604,7 +609,7 @@ type
     ///Начало битвы, спавн врагов
     procedure StartBattle();
     begin
-      BattleProcessor.EnemyList:= new IBattleEntity[EnemyPoint.Length];
+      BattleProcessor.EnemyList:= new list<IBattleEntity>();
       for var i:= 0 to EnemyPoint.Length-1 do
        begin
         case (i+1) of
@@ -628,7 +633,7 @@ type
         E:= new TreeEnemy(X,Y);
       end;
       end;
-      BattleProcessor.EnemyList[Index]:= E;
+      BattleProcessor.EnemyList.Add(E);
     end;
     
     procedure CreateNextLevel(levelName:string);
@@ -980,8 +985,14 @@ type
     BattleProcessor.PlayerBattle:= new BattlePlayre;
      var b:= new LAButton(12*48, 10*48, 'play.png', 'playpress.png');
      b.OnClick += procedure() -> begin 
-      battleprocessor.PlayerBattle.Attack(BattleProcessor.SLEnemy);     
-     end;
+       if (BattleProcessor.PlayerStep) and (BattleProcessor.selectedEnemy<> nil) then
+          begin BattleProcessor.PlayerStep:= false;
+          battleprocessor.PlayerBattle.Attack(BattleProcessor.SLEnemy);
+          BattleProcessor.selectedEnemy.PicC.Destroy;
+          BattleProcessor.selectedEnemy.ThisLock:= false;
+          BattleProcessor.selectedEnemy:=nil;
+          end;          
+       end;
      BattleProcessor.StartBattle();
   end; 
   
