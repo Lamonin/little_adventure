@@ -17,8 +17,7 @@ begin
   if (k = key.E) then begin
     var l := LAGD.Grid[LAGD.Player.GetY, LAGD.Player.GetX].GridObject;
     if (l<>nil) and (l.objType = 'nextLevel') then begin
-      ChangeLevel(l.NextLevelName);
-      exit;
+      ChangeLevel(l.NextLevelName); exit;
     end;
     LAGD.Player.UseGrid();
   end;
@@ -33,12 +32,7 @@ begin
 end;
 
 begin
-  Window.Caption := 'Little Adventure';
-  Window.IsFixedSize := True;
-  Window.SetSize(1296, 768);
-  Window.CenterOnScreen();
-  
-  DrawMainMenu();
+  StartGame();
   
   OnDrawFrame := OnDraw;
   OnKeyDown := KeyDown;

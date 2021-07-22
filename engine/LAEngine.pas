@@ -114,7 +114,7 @@ type
       if (buttonText = '') or (pic = nil) then exit;
       pic.Text := buttonText;
       pic.FontName := 'GranaPadano';
-      pic.FontColor := Colors.Yellow;
+      pic.FontColor := ARGB(255, 255, 214, 0);
       pic.FontSize := 32;
       pic.TextAlignment := Alignment.Center;
     end;
@@ -194,7 +194,7 @@ type
     procedure SetPos(pos:Point);
     begin
       pos.X += 24 - sprite.Width / 2;
-      pos.Y -= sprite.Height / 2;
+      pos.Y -= sprite.Height - 24;
       sprite.MoveTo(pos.X, pos.Y);
       position := pos;
     end;
@@ -888,14 +888,55 @@ property PicC: PictureWPF Read Write;
   end; 
   
   //РАЗДЕЛ ОПИСАНИЯ ГЛАВНОГО МЕНЮ
-  event DeleteButtons: procedure;
+  procedure DrawMainMenu(); forward;
+  
+  procedure DrawConfirmMenu(text:string; confirm, cancel:procedure);
+  var b_confirm, b_cancel: LAButton;
+  begin
+    var r_body := new PictureWPF(384, 280, 'img\ui\rect_confirm.png');
+    r_body.Text := text;
+    r_body.FontName := 'GranaPadano';
+    r_body.FontColor := ARGB(255, 255, 214, 0);
+    r_body.FontSize := 32;
+    r_body.TextAlignment := Alignment.Center;
+    
+    b_confirm := new LAButton(384, 424, 'rect_menu_rules_wide.png', 'rect_menu_rules_wide_click.png');
+    b_confirm.Text := 'ОК';
+    b_cancel := new LAButton(656, 424, 'rect_menu_rules_wide.png', 'rect_menu_rules_wide_click.png');
+    b_cancel.Text := 'ОТМЕНА';
+    
+    b_confirm.OnClick := procedure() -> begin 
+      confirm; 
+      r_body.Destroy(); b_confirm.Destroy(); b_cancel.Destroy(); 
+    end;
+    
+    b_cancel.OnClick := procedure() -> begin
+      cancel; 
+      r_body.Destroy(); b_confirm.Destroy(); b_cancel.Destroy(); 
+    end;
+  end;
+  
+  procedure DrawRulesMenu();
+  var b_prev, b_next, b_back:LAButton;
+  begin
+    b_prev := new LAButton(309, 598, 'rect_menu_rules_wide.png', 'rect_menu_rules_wide_click.png');
+    b_prev.Text := 'ПРЕДЫДУЩИЙ';
+    
+    b_back := new LAButton(581, 598, 'rect_menu_rules_short.png', 'rect_menu_rules_short_click.png');
+    b_back.Text := 'В МЕНЮ';
+    
+    b_next := new LAButton(731, 598, 'rect_menu_rules_wide.png', 'rect_menu_rules_wide_click.png');
+    b_next.Text := 'СЛЕДУЮЩИЙ';
+    
+    b_back.OnClick := procedure() -> begin
+      DrawMainMenu();
+      b_prev.Destroy(); b_back.Destroy(); b_next.Destroy();
+    end;
+  end;
+  
   procedure DrawMainMenu();
   var b_continue, b_startNew, b_rules, b_about, b_exit:LAButton;
   begin
-    //Сначала СОЗДАЕМ кнопки. Только потом ПРИСВАИВАЕМ события!
-    //Создаем изображение перехода между уровнями.
-    if (LAGD.TransPic = nil) then LAGD.TransPic := new TransitionPic();
-    
     var loader := new LALoader('data/userdata.json');
     
     b_continue := new LAButton(32, 694, 'rect_menu_wide.png', 'rect_menu_wide_click.png');
@@ -931,14 +972,32 @@ property PicC: PictureWPF Read Write;
     
     b_startNew.OnClick := procedure() -> begin
       //Сбрасываем прогресс игрока
-      loader.SetValue('$.current_level', 'Level_0');
-      loader.SaveFile();
-      ChangeLevel(loader.GetValue&<string>('$.current_level'));
+      DrawConfirmMenu('ВЫ УВЕРЕНЫ?', 
+      procedure() -> begin
+        loader.SetValue('$.current_level', 'Level_0');
+        loader.SaveFile();
+        ChangeLevel(loader.GetValue&<string>('$.current_level'));
+      end, 
+      procedure() -> begin
+        DrawMainMenu();
+      end);
       delButtons();
     end;
     
-    b_rules.OnClick := procedure() -> begin delButtons; end;
+    b_rules.OnClick := procedure() -> begin DrawRulesMenu(); delButtons; end;
     b_about.OnClick := procedure() -> begin end;
     b_exit.OnClick := procedure() -> begin writeln('Игра закрыта!'); Halt; end;
+  end;
+  
+  procedure StartGame();
+  begin
+    Window.Caption := 'Little Adventure';
+    Window.IsFixedSize := True;
+    Window.SetSize(1296, 768);
+    Window.CenterOnScreen();
+    //Сначала СОЗДАЕМ кнопки. Только потом ПРИСВАИВАЕМ события!
+    //Создаем изображение перехода между уровнями.
+    if (LAGD.TransPic = nil) then LAGD.TransPic := new TransitionPic();
+    DrawMainMenu();
   end;
 end.
