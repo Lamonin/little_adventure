@@ -20,17 +20,13 @@ begin
   p.Destroy();
 end;
 
-procedure ApplyFontSettings<T>(var obji:T);
-  where T:ObjectWPF;
+function ApplyFontSettings(obj:ObjectWPF):ObjectWPF;
 begin
-  var obj := obji;
-  Redraw(procedure()-> begin
-    obj.FontName := 'GranaPadano';
-    obj.FontColor := ARGB(255, 255, 214, 0);
-    obj.FontSize := 32;
-    obj.TextAlignment := Alignment.Center;
-  end);
-  obji := obj;
+  obj.FontName := 'GranaPadano';
+  obj.FontColor := ARGB(255, 255, 214, 0);
+  obj.FontSize := 32;
+  obj.TextAlignment := Alignment.Center;
+  Result := obj;
 end;
 
 type
@@ -117,7 +113,7 @@ type
     begin
       if (buttonText = '') or (pic = nil) then exit;
       pic.Text := buttonText;
-      ApplyFontSettings(pic);
+      pic := ApplyFontSettings(pic) as PictureWPF;
     end;
     
     procedure SetText(t:string);
@@ -176,9 +172,8 @@ type
     procedure ChangeSprite();
     begin
       Redraw(procedure()-> begin
-        var p := sprite.LeftTop;
         sprite.Destroy();
-        sprite:= new PictureWPF(p, curAnim.frames[frameNum]);
+        sprite:= new PictureWPF(0,0, curAnim.frames[frameNum]);
         SetPos(position);
       end);
       sprite.Visible := isVisible;
@@ -373,9 +368,8 @@ type
       static CombatTimer: Timer;
       static Stoptimer, isPlayerTurn: boolean;
       static ListEnemy: List<IBattleEntity>;
-      static PPlayerBattle: IBattleEntity;
-      static SLEnemy: IBattleEntity;
-      static BattleEnemyPanel : PictureWPF;
+      static PPlayerBattle, SLEnemy: IBattleEntity;
+      static BattleEnemyPanel, PlayerDamagePanel, PlayerArmorPanel, PlayerHPPanel, TurnRect : PictureWPF;
     public
     
     static procedure ProcessAttack(ActionList: List<IBattleEntity>);
@@ -394,25 +388,39 @@ type
       //Ходит игрок
       if ActionList[I].Pname = 'Player' then begin 
         isPlayerTurn:= true; 
-        Writeln('Ход игрока'); 
+        TurnRect.Text := 'ВАШ ХОД'; 
         I+=1;
         exit; 
       end;
+      TurnRect.Text := 'ХОД ПРОТИВНИКА'; 
       ActionList[I].Attack(PPlayerBattle);
       I+=1;
      end);
      ProcessTimer.Start;
     end;
-     
       static procedure StartBattle();
       begin
-      BattleEnemyPanel:= new PictureWPF(167, 616, 'img\ui\rect_panel_battle.png');
-      ApplyFontSettings(BattleEnemyPanel);
+      //Инициализируем элементы интерфейса боя 
+      TurnRect := new PictureWPF(327, 572, 'img\ui\rect_battle_turn.png');
+      TurnRect := ApplyFontSettings(TurnRect) as PictureWPF;
+      TurnRect.FontSize := 28;
       
+      BattleEnemyPanel:= new PictureWPF(167, 616, 'img\ui\rect_panel_battle.png');
+      BattleEnemyPanel := ApplyFontSettings(BattleEnemyPanel) as PictureWPF;
+
       foreach var t in ListEnemy do begin
         BattleEnemyPanel.Text += t.Pname + '  |  ';
       end;
-      BattleEnemyPanel.Text.TrimEnd('  |  '.ToCharArray());
+      BattleEnemyPanel.Text :=  Copy(BattleEnemyPanel.Text, 1, BattleEnemyPanel.Text.Length - 5);
+      
+      PlayerHPPanel := new PictureWPF(167, 572, 'img\ui\hp_bar.png');
+      PlayerArmorPanel := new PictureWPF(936, 572, 'img\ui\rect_battle_mini.png');
+      PlayerDamagePanel := new PictureWPF(1041, 572, 'img\ui\rect_battle_mini.png');
+      var icon := new PictureWPF(0,0,'img\ui\icon_hp.png');
+      PlayerHPPanel.AddChild(icon, Alignment.LeftTop);
+      
+      //Закончили инициализацию
+      
       CombatTimer := new Timer(250, procedure() ->
       begin
         if (stopTimer) then exit;
@@ -433,7 +441,7 @@ type
       static property selectedEnemy: IBattleEntity Read SLEnemy Write SLEnemy;
   end;
 
-  BattleEntity = class(IBattleEntity) 
+  BattleEntity = class(IBattleEntity)
     private
      name: string;
      hp, attackDmg, agility, actionPoint, delay : integer;
@@ -512,10 +520,10 @@ type
    
    constructor Create(X, Y:integer);
    begin
-     attackDmg:=4;
-     agility:=3;
+     attackDmg:=2;
+     agility:=4;
      hp:= 10;
-     name := 'Skeleton';
+     name := 'СКЕЛЕТОН';
      Delay:= 2000;
      Sprite:= new LSprite(X,Y,'Idle',LoadSprites('enemy\Skeleton_Seeker\idle', 6));
      Sprite.AddAnim('Hit', LoadSprites('enemy\Skeleton_Seeker\hit', 4), 160, false, procedure()->
@@ -539,10 +547,10 @@ type
    
    constructor Create(X, Y:integer);
     begin
-     attackDmg:=1;
-     agility:=4;
+     attackDmg:=4;
+     agility:=2;
      hp:=15;
-     name := 'TreeEnemy';
+     name := 'ДРЕВО';
      Delay:= 2000;
      Sprite:= new LSprite(X,Y,'Idle',LoadSprites('enemy\Sprout\idle', 4));
      Sprite.AddAnim('Hit', LoadSprites('enemy\Sprout\hit', 5), 160, false, procedure()->
@@ -565,11 +573,12 @@ type
   begin
     hp:=100;
     attackDmg:=5;
-    agility:=4;
+    agility:=5;
     name:= 'Player';
     Delay:= 250;
   end;
-   procedure Attack(E: IBattleEntity);override;      
+  
+  procedure Attack(E: IBattleEntity);override;      
   begin
     if (E = nil) then exit;
     E.Damage(AttackDmg);
@@ -654,11 +663,11 @@ type
       for var i:= 0 to EnemyPoint.Length-1 do
        begin
         case (i+1) of
-           1: CreateEnemy(i, 12, 4);
-           2: CreateEnemy(i, 15, 2);
-           3: CreateEnemy(i, 9, 2);
-           4: CreateEnemy(i, 6, 4);
-           5: CreateEnemy(i, 18, 4);
+           1: CreateEnemy(i, 13, 5);
+           2: CreateEnemy(i, 16, 3);
+           3: CreateEnemy(i, 10, 3);
+           4: CreateEnemy(i, 7, 5);
+           5: CreateEnemy(i, 19, 5);
           end;
       end;
     end;
@@ -1034,7 +1043,7 @@ type
      b_attack.OnClick += procedure() -> begin 
      if (BattleProcessor.PlayerStep) and (BattleProcessor.selectedEnemy<> nil) then
         begin BattleProcessor.PlayerStep:= false;
-        battleprocessor.PlayerBattle.Attack(BattleProcessor.SLEnemy);
+        BattleProcessor.PlayerBattle.Attack(BattleProcessor.SLEnemy);
         BattleProcessor.selectedEnemy.PicC.Destroy;
         BattleProcessor.selectedEnemy.ThisLock:= false;
         BattleProcessor.selectedEnemy:=nil;
@@ -1057,11 +1066,8 @@ type
   begin
     var r_body := new PictureWPF(384, 280, 'img\ui\rect_confirm.png');
     r_body.Text := text;
-    r_body.FontName := 'GranaPadano';
-    r_body.FontColor := ARGB(255, 255, 214, 0);
-    r_body.FontSize := 32;
-    r_body.TextAlignment := Alignment.Center;
-    
+    r_body := ApplyFontSettings(r_body) as PictureWPF;
+
     b_confirm := new LAButton(384, 424, 'rect_menu_rules_wide.png', 'rect_menu_rules_wide_click.png');
     b_confirm.Text := 'ОК';
     b_cancel := new LAButton(656, 424, 'rect_menu_rules_wide.png', 'rect_menu_rules_wide_click.png');
@@ -1159,7 +1165,7 @@ type
     Window.IsFixedSize := True;
     Window.SetSize(1296, 768);
     Window.CenterOnScreen();
-    LAGD.backgroundPic := new PictureWPF(0,0, 'data\levels\LALevels\png\MainMenuField1.png');   
+    LAGD.backgroundPic := new PictureWPF(0,0, 'img\MainMenuField1.png');   
     if (LAGD.TransPic = nil) then LAGD.TransPic := new TransitionPic();
     DrawMainMenu();
   end;
