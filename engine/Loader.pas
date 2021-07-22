@@ -15,8 +15,12 @@ begin
       info.UseShellExecute := true;
       info.WindowStyle := ProcessWindowStyle.Hidden;
       info.Verb := 'runas';
-      System.Diagnostics.Process.Start(info);
-      writeln('Шрифт ', fonts[i] ,' загружен и установлен!');
+      try
+        System.Diagnostics.Process.Start(info);
+        writeln('Шрифт ', fonts[i] ,' загружен и установлен!');
+      except
+        writeln('Шрифт не установлен! Ошибка!');
+      end;
     end;
 end;
 
