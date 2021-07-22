@@ -32,8 +32,8 @@ end;
 ///Устанавливаем шрифты программы
 procedure LoadFont();
 begin
-  var fonts:array of string := new string[0];
-  //var fonts:array of string := ('Huilo');
+  //var fonts:array of string := new string[0];
+  var fonts:array of string := ('GranaPadano');
   if (fonts.Length = 0) then exit;
   for var i := 0 to fonts.Length-1 do
     if not System.IO.File.Exists('C:\Windows\Fonts\'+fonts[i]+'.ttf') then begin
