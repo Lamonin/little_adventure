@@ -354,6 +354,7 @@ type
     property Pname: string Read Write ;
     property PicC: PictureWPF Read Write;
     property GetHP: integer Read;
+    property GetDelay: integer Read;
     Function AddAction():boolean;
   end;
   //КОНЕЦ ОПИСАНИЯ ИНТЕРФЕЙСНОЙ ЧАСТИ
@@ -366,11 +367,31 @@ type
       static PPlayerBattle: IBattleEntity;
       static SLEnemy: IBattleEntity;
     public
+    
+    static procedure ProcessAtack(ActionList: list<IBattleEntity>);
+    begin
+    var ProccesTimer : Timer;
+    var I:= 0;
+    ProccesTimer := new Timer(100,procedure() -> begin 
+      if I = ActionList.Count then begin
+        ProccesTimer.Stop;
+        Stoptimer:=false;
+        exit;
+      end;
+      Writeln('attack');
+      ProccesTimer.Interval:= ActionList[I].GetDelay;
+      Writeln(ProccesTimer.Interval);
+      ActionList[i].Attack(PPlayerBattle);
+      I+=1;
+     end);
+     ProccesTimer.Start;
+    end;
+     
      static procedure StartBattle();
         begin
         CombatTimer := new Timer(250, procedure() ->
       begin
-          //if (stopTimer) then exit;
+          if (stopTimer) then exit;
           var ActionList:= new List<IBattleEntity>();
           
         foreach var t in ListEnemy do 
@@ -380,7 +401,7 @@ type
          if (ActionList.Count>0) then
          begin       
            Stoptimer:= true;
-           foreach var E in ActionList do begin  if PPlayerBattle.GetHP <=0 then begin CombatTimer.Stop; exit end; E.Attack(PPlayerBattle); end;
+           ProcessAtack(ActionList);
          end;
       end);
         CombatTimer.Start;
@@ -392,6 +413,7 @@ type
 
   BattleEntity = class(IBattleEntity) 
     private
+    Delay : integer;
      name: string;
      hp, attackDmg, agility, actionPoint : integer;
      Sprite : LSprite;
@@ -447,10 +469,12 @@ type
       
      procedure Attack(E: IBattleEntity);virtual;      
       begin
+        if (E = nil) or (E.GetHP <=0) then exit;
         E.Damage(AttackDmg);
-        Sprite.PlayAnim('attack');
+        Sprite.PlayAnim('Attack');
         
       end; 
+      property GetDelay: integer Read delay;
       property GetHP: integer Read hp;
       property Pname: string Read name Write name;
       property ThisLock: Boolean Read LockThis Write LockThis;
@@ -468,9 +492,10 @@ type
      agility:=3;
      hp:= 10;
      name := 'Skeleton';
+     Delay:= 3000;
      writeln(X,Y:10);
      Sprite:= new LSprite(X,Y,'Idle',LoadSprites('enemy\Skeleton_Seeker\idle', 6));
-     Sprite.AddAnim('Attack', LoadSprites('enemy\Skeleton_Seeker\death', 5), 160, false);
+     Sprite.AddAnim('Attack', LoadSprites('enemy\Skeleton_Seeker\spawn', 11), 160, false);
      Sprite.AddAnim('Death', LoadSprites('enemy\Skeleton_Seeker\death', 5), 160, false);
      Sprite.PlayAnim('Idle');
    end;
@@ -488,6 +513,7 @@ type
      agility:=4;
      hp:=15;
      name := 'TreeEnemy';
+     Delay:= 2000;
      Sprite:= new LSprite(X,Y,'Idle',LoadSprites('enemy\Sprout\idle', 4));
      Sprite.AddAnim('Attack', LoadSprites('enemy\Sprout\attack', 6), 160, false);
      Sprite.AddAnim('Death', LoadSprites('enemy\Sprout\death', 8), 160, false);
@@ -505,6 +531,7 @@ type
     attackDmg:=5;
     agility:=2;
     name:= 'Player';
+    Delay:= 1000;
     end;
    procedure Attack(E: IBattleEntity);override;      
       begin
