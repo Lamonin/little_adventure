@@ -1,11 +1,5 @@
-﻿uses GraphWPF, WPFObjects;
+﻿uses WPFObjects;
 uses LAEngine in 'engine/LAEngine.pas';
-
-//Процедура вызывается каждый раз при отрисовке
-procedure OnDraw(dt:real);
-begin
-  LAGD.TransPic.ToFront();
-end;
 
 //Обработка ввода пользователя
 procedure KeyDown(k: Key);
@@ -13,14 +7,7 @@ begin
   ///Если возможно, то скрываем изображение перехода
   if (LAGD.TransPic.CanHide) and (k = Key.Space) then LAGD.TransPic.Hide();
   if (LAGD.Player = nil) or (LAGD.Player.isBlocked) then exit;
-  if (k = key.E) then
-  begin
-    var l := LAGD.Grid[LAGD.Player.GetY, LAGD.Player.GetX].GridObject;
-    if (l<>nil) and (l.objType = 'nextLevel') then begin
-      ChangeLevel(l.NextLevelName); exit;
-    end;
-    LAGD.Player.UseGrid();
-  end;
+  if (k = key.E) then LAGD.Player.UseGrid();
   if (k = Key.W) or (k = key.Up) then
     LAGD.Player.MoveOn(0, -1, 'up')
   else if (k = Key.S) or (k = key.Down) then
@@ -33,7 +20,5 @@ end;
 
 begin
   StartGame();
-  
-  OnDrawFrame := OnDraw;
   OnKeyDown := KeyDown;
 end.

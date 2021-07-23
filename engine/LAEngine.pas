@@ -1,10 +1,12 @@
 ﻿unit LAEngine;
 {$reference Newtonsoft.Json.dll}
 uses Newtonsoft.Json.Linq;
-uses GraphWPF, WPFObjects, Timers, Loader;
+uses WPFObjects, Timers, Loader;
 
+//Опережающее описание процедур
 procedure CombatField(); forward;
 procedure CloseLevel(); forward;
+procedure ChangeLevel(lname:string); forward;
 
 ///Проверяет - принадлежит ли точка прямоугольнику объекта
 function PtInside(x,y:real; obj:ObjectWPF):boolean;
@@ -267,8 +269,7 @@ type
   ///Загружает спрайт с именем sname.
   function LoadSprite(sname:string):array of string;
   begin
-    Result := new string[1];
-    Result[0] := 'img/'+sname+'.png';
+    Result := new string[1]; Result[0] := 'img/'+sname+'.png';
   end;
   
   ///Загружает последовательность спрайтов с именем sname и номерами от 1 до count.
@@ -675,9 +676,7 @@ type
     messages, EnemyPoint:array of string;
     static enemyPoints:List<Point>;
     ePointAnim:LSprite;
-    
-    
-    
+
     procedure SetVisible(t:boolean);
     begin
       if (ePointAnim<>nil) then ePointAnim.Visible := t;
@@ -827,6 +826,7 @@ type
     property ePointVisible: boolean write SetVisible;
   end;
   
+  
   ///Класс игрока в "мире".
   PlayerWorld = class (IPlayerWorld)
     private
@@ -883,7 +883,7 @@ type
       useRect.TextAlignment := Alignment.Center;
       useRect.FontColor := Colors.Yellow;
       useRect.FontSize := 18;
-      useRect.Text := 'E';
+      useRect.FontName := 'GranaPadano'; useRect.Text := 'E';
       useRect.Visible := false;
       
       //Инициализация изображений игрока
@@ -905,7 +905,7 @@ type
       //Обновляем позицию визуального представления игрока
       updateSprite := new Timer(10, procedure() -> begin
         var p := point.LeftTop;
-        p.Y+=12;
+        p.Y += 12;
         sprite.Pos := p;
         useRect.MoveTo(point.LeftTop.x+12, point.LeftTop.y-48);
       end);
@@ -954,6 +954,10 @@ type
         'up': dy := -1;
         'down': dy := 1;
       end;
+      var l := LAGD.Grid[GetY, GetX].GridObject;
+      if (l<>nil) and (l.objType = 'nextLevel') then begin
+        ChangeLevel(l.NextLevelName); exit;
+      end;
       if (GetX+dx<0) or (GetX+dx>26) or (GetY+dy<0) or (GetY+dy>15) then exit;
       if not LAGD.Grid[GetY+dy, GetX+dx].CanUse then exit;
       var obj := LAGD.Grid[GetY+dy, GetX+dx].GridObject;
@@ -993,6 +997,7 @@ type
         pic.TextAlignment := Alignment.Center;
         pic.Visible := false;
       end);
+      OnDrawFrame += procedure(dt:real) -> LAGD.TransPic.ToFront();
     end;
     
     ///Показать изображение перехода
