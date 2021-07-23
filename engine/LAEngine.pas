@@ -16,9 +16,7 @@ end;
 ///Меняет изображение from на изображение из файла по пути too.
 procedure ChangePicture(var from:PictureWPF; too:string);
 begin
-  var p := from;
-  from := new PictureWPF(p.LeftTop, too);
-  p.Destroy();
+  var p := from; from := new PictureWPF(p.LeftTop, too); p.Destroy();
 end;
 
 function ApplyFontSettings(obj:ObjectWPF):ObjectWPF;
@@ -70,10 +68,7 @@ type
     end;
     
     ///Сохраняет изменения в файле
-    procedure SaveFile();
-    begin
-      WriteAllText(path,jObj.ToString(), Encoding.UTF8);
-    end;
+    procedure SaveFile() := WriteAllText(path,jObj.ToString(), Encoding.UTF8);
   end;
   
   //##############-НАЧАЛО_ИНТЕРФЕЙС-################
@@ -87,7 +82,7 @@ type
     idlePic, clickPic, buttonText:string;
     
     ///Изменение спрайта на clickPic
-    procedure ClickedSprite(x, y: real; mousebutton: integer);
+    procedure Clicked(x, y: real; mousebutton: integer);
     begin
       if (pic = nil) then exit;
       if (mousebutton <> 1) and (isClicked) then exit;
@@ -99,15 +94,13 @@ type
     end;
     
     ///Обработка нажатия
-    procedure ProcessSprite(x, y: real; mousebutton: integer);
+    procedure Process(x, y: real; mousebutton: integer);
     begin
       if (pic = nil) then exit;
       ChangePicture(pic, idlePic);
       ApplyText();
       if (mousebutton <> 0) then exit;
-      if (OnClick <> nil) and PtInside(x,y,pic) and (isClicked) then begin
-        OnClick();
-      end;
+      if (OnClick <> nil) and PtInside(x,y,pic) and (isClicked) then OnClick();
       isClicked := false;
     end;
     
@@ -120,13 +113,12 @@ type
     
     procedure SetText(t:string);
     begin
-      buttonText := t;
-      ApplyText();
+      buttonText := t; ApplyText();
     end;
     
     public
      //Событие нажатия на кнопку
-    OnClick: procedure;
+    event OnClick: procedure;
     ///Создаем кнопку с изображением по умолчанию idlePic
     ///И с изображением по нажатию clickPic.
     constructor Create(x,y:integer; idlePic, clickPic:string);
@@ -135,22 +127,19 @@ type
       self.clickPic := 'img\ui\' + clickPic;
       
       pic := new PictureWPF(x, y, self.idlePic);
-      OnMouseDown += ClickedSprite;
-      OnMouseUp += ProcessSprite;
+      OnMouseDown += Clicked; OnMouseUp += Process;
     end;
     
     procedure Destroy();
     begin
+      OnMouseDown -= Clicked; OnMouseUp -= Process;
       if (pic = nil) then exit;
-      OnMouseDown -= ClickedSprite;
-      OnMouseUp -= ProcessSprite;
-      self.pic.Destroy();
-      self.pic := nil;
+      pic.Destroy();
+      pic := nil;
     end;
     
     property Text: string read buttonText write SetText;
   end;
-  
   //##############-КОНЕЦ_ИНТЕРФЕЙС-#################
   
   //##############-НАЧАЛО_СПРАЙТЫ-################
@@ -177,8 +166,8 @@ type
         sprite.Destroy();
         sprite:= new PictureWPF(0,0, curAnim.frames[frameNum]);
         SetPos(position);
+        sprite.Visible := isVisible;
       end);
-      sprite.Visible := isVisible;
     end;
     
     //Обновление кадра изображения
@@ -189,15 +178,14 @@ type
       else begin 
         updater.Stop(); 
         if (curAnim.NextAnim<>nil) then curAnim.NextAnim;
-        exit; 
+        exit;
       end;
       ChangeSprite();
     end;
     
     function GetPos():Point;
     begin
-      if (sprite <> nil) then
-        Result := sprite.Center
+      if (sprite <> nil) then Result := sprite.Center
       else Result := position;
     end;
     
@@ -229,6 +217,7 @@ type
       anims := new Dictionary<string, spriteInfo>();
       AddAnim(aname, frames, speed, looped);
       sprite := new PictureWPF(position, anims[aname].frames[0]);
+      updater := new Timer(100, UpdateFrame);
       SetPos(position);
     end;
    
@@ -250,10 +239,10 @@ type
     procedure PlayAnim(aname:string);
     begin
       curAnim := anims[aname];
-      if (updater <> nil) then updater.Stop();
+      if (updater.Enabled) then updater.Stop();
       frameNum := 0;
       if (curAnim.frames.Length>1) then begin
-        updater := new Timer(curAnim.speed, UpdateFrame);
+        updater.Interval := curAnim.speed;
         updater.Start();
       end;
       ChangeSprite();
@@ -262,15 +251,15 @@ type
     ///Уничтожаем спрайт.
     procedure Destroy();
     begin
+      updater.Stop();
       sprite.Destroy();
       sprite := nil;
-      updater.Stop();
     end;
     
     ///Устанавливает позицию спрайта
     property Pos: Point Read GetPos write SetPos;
     ///Количество фреймов текущей анимации
-    property CurrentFrameCount: Integer Read getFrameCount;
+    property CurrentFrameCount: Integer Read GetFrameCount;
     ///Видимость спрайта
     property Visible: boolean write isVisible read isVisible;
   end;
@@ -286,9 +275,7 @@ type
   function LoadSprites(sname:string; count:integer):array of string;
   begin
     Result := new string[count];
-    for var i:= 0 to count-1 do begin
-      Result[i] := 'img/'+sname+(i+1)+'.png';
-    end;
+    for var i:= 0 to count-1 do Result[i] := 'img/'+sname+(i+1)+'.png';
   end;
   //##############-КОНЕЦ_СПРАЙТЫ-################
   
@@ -336,22 +323,11 @@ type
   ///Общие данные игры по ходу её выполнения
   ///Обращение к данным делается, например, так: LAGD.Player
   LAGD = static class
-    private
-    static pplayer:IPlayerWorld;
-    static llevelGrid:levelGridArr;
-    static llevelPicture, CCombatPic, backgroundPic:PictureWPF;
-    static ttransPic:ITransitionPic;
     public
-    ///Персонаж игрока в обычном уровня
-    static property Player: IPlayerWorld read pplayer write pplayer;
-    ///Сетка уровня
-    static property Grid: levelGridArr read llevelGrid write llevelGrid;
-    ///Изображение обычного уровня
-    static property LevelPic: PictureWPF read llevelPicture write llevelPicture;
-    ///Изображение боевого уровня
-    static property CombatPic: PictureWPF read CCombatPic write CCombatPic;
-    static property TransPic: ITransitionPic read ttransPic write ttransPic;
-    static property GetBackground: PictureWPF read backgroundPic write backgroundPic;
+    static Player:IPlayerWorld; //Игрок в мире
+    static Grid:levelGridArr; //Сетка уровня
+    static LevelPic, CombatPic, backgroundPic:PictureWPF; //Изображения уровня, поля битвы и заднего фона меню
+    static TransPic:ITransitionPic; //Экран перехода
   end;
   
   IBattleEntity = interface
@@ -661,7 +637,7 @@ type
   constructor Create();
   begin
     var loader := new LALoader('data/userdata.json');
-    hp := 40; //loader.GetValue&<integer>('$.hp');
+    hp := 20; //loader.GetValue&<integer>('$.hp');
     max_hp:=hp;
     attackDmg:=8;
     agility:=5;
@@ -1013,7 +989,7 @@ type
         pic := new RectangleWPF(0, 0, 1296, 768, Colors.Black);
         pic.FontName := 'GranaPadano';
         pic.FontColor := Colors.White;
-        pic.FontSize := 24;
+        pic.FontSize := 32;
         pic.TextAlignment := Alignment.Center;
         pic.Visible := false;
       end);
@@ -1042,8 +1018,7 @@ type
           Hide();
           t.Stop();
         end);
-        t.Start();
-        exit;
+        t.Start(); exit;
       end;
       
       Redraw(procedure()-> begin
@@ -1055,8 +1030,7 @@ type
         isCanHide := true;
         pic.Text := message;
         t.Stop();
-      end);
-      t.Start();
+      end); t.Start();
     end;
     
     ///Скрыть изображение перехода
@@ -1076,13 +1050,14 @@ type
   ///Загружает уровень с именем lname и настраивает сетку grid.
   procedure LoadLevel(lname:string);
   begin
+    if (LAGD.Player<>nil) then LAGD.Player.isBlocked := false;
     var loader := new LALoader('data/levels/LALevels.ldtk');
-    
+    LAGD.TransPic.Show(procedure()-> begin LAGD.Player.isBlocked := false end);
     var i := -1;
+    
     //Находим номер уровня в массиве
-    for i := 0 to loader.GetValue&<JToken>('$.levels').Count()-1 do begin
+    for i := 0 to loader.GetValue&<JToken>('$.levels').Count()-1 do
       if loader.GetValue&<string>('$.levels['+i+'].identifier') = lname then break;
-    end;
     
     var val := loader.GetValue&<JToken>('$.levels['+i+'].layerInstances[0].entityInstances');
     var x,y:integer;
@@ -1122,15 +1097,13 @@ type
     //Устанавливаем изображение уровня
     LAGD.LevelPic := new PictureWPF(0, 0,'data/levels/LALevels/png/'+lname+'.png');
     LAGD.LevelPic.ToBack(); //Перемещаем картинку уровня назад
+    LAGD.backgroundPic.ToBack();
   end;
   
   ///Закрывает текущий уровень
   procedure CloseLevel();
   begin
     if (LAGD.LevelPic = nil) then exit;
-//    LAGD.TransPic.Show(procedure()->begin 
-//      LAGD.player.isBlocked := false; //Разблокируем движение игрока
-//    end); //Включаем экран перехода
     LAGD.LevelPic.Destroy(); //Уничтожаем старое изображение уровня
     UseObject.ClearEnemyPointsList(); //Уничтожаем точки врагов
     var t : levelGridArr; //
@@ -1183,12 +1156,12 @@ type
     b_cancel := new LAButton(656, 424, 'rect_menu_rules_wide.png', 'rect_menu_rules_wide_click.png');
     b_cancel.Text := 'ОТМЕНА';
     
-    b_confirm.OnClick := procedure() -> begin 
+    b_confirm.OnClick += procedure() -> begin 
       confirm; 
       r_body.Destroy(); b_confirm.Destroy(); b_cancel.Destroy(); 
     end;
     
-    b_cancel.OnClick := procedure() -> begin
+    b_cancel.OnClick += procedure() -> begin
       cancel; 
       r_body.Destroy(); b_confirm.Destroy(); b_cancel.Destroy(); 
     end;
@@ -1206,7 +1179,7 @@ type
     b_next := new LAButton(731, 598, 'rect_menu_rules_wide.png', 'rect_menu_rules_wide_click.png');
     b_next.Text := 'СЛЕДУЮЩИЙ';
     
-    b_back.OnClick := procedure() -> begin
+    b_back.OnClick += procedure() -> begin
       DrawMainMenu();
       b_prev.Destroy(); b_back.Destroy(); b_next.Destroy();
     end;
@@ -1242,14 +1215,14 @@ type
       b_exit.Destroy();
     end;
     
-    b_continue.OnClick := procedure() -> begin
+    b_continue.OnClick += procedure() -> begin
       //Загружаем прогресс игрока
       ChangeLevel(loader.GetValue&<string>('$.current_level'));
       delButtons();
       LAGD.backgroundPic.Visible := false;
     end;
     
-    b_startNew.OnClick := procedure() -> begin
+    b_startNew.OnClick += procedure() -> begin
       //Сбрасываем прогресс игрока
       DrawConfirmMenu('ВЫ УВЕРЕНЫ?', 
       procedure() -> begin
@@ -1264,9 +1237,9 @@ type
       delButtons();
     end;
     
-    b_rules.OnClick := procedure() -> begin DrawRulesMenu(); delButtons; end;
-    b_about.OnClick := procedure() -> begin end;
-    b_exit.OnClick := procedure() -> begin writeln('Игра закрыта!'); Halt; end;
+    b_rules.OnClick += procedure() -> begin DrawRulesMenu(); delButtons; end;
+    b_about.OnClick += procedure() -> begin end;
+    b_exit.OnClick += procedure() -> begin writeln('Игра закрыта!'); Halt; end;
   end;
   
   procedure StartGame();
