@@ -13,7 +13,8 @@ begin
   ///Если возможно, то скрываем изображение перехода
   if (LAGD.TransPic.CanHide) and (k = Key.Space) then LAGD.TransPic.Hide();
   if (LAGD.Player = nil) or (LAGD.Player.isBlocked) then exit;
-  if (k = key.E) then begin
+  if (k = key.E) then
+  begin
     var l := LAGD.Grid[LAGD.Player.GetY, LAGD.Player.GetX].GridObject;
     if (l<>nil) and (l.objType = 'nextLevel') then begin
       ChangeLevel(l.NextLevelName); exit;
