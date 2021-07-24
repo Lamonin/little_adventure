@@ -544,18 +544,23 @@ type
     begin
       BattleProcessor.OnBattleEndEvent += procedure -> Destroy();
       BattleProcessor.enemyCount += 1;
-      ShadowPic := new PictureWPF(0, 0, 'img\enemy\shadow.png');
       OnMouseDown += klik;
+    end;
+
+    procedure CreateCircleShadowPics(yOffset:integer);
+    begin
+      ShadowPic := new PictureWPF(Sprite.Pos.X-65, Sprite.Pos.Y+Sprite.Height/2-yOffset, 'img\enemy\shadow.png');
+      CirclePic:= new PictureWPF(Sprite.Pos.X-65,Sprite.Pos.Y+Sprite.Height/2-45,'img\enemy\circle.png');
+      CirclePic.Visible := False;
     end;
 
     procedure Select();
     begin
       if (BattleProcessor.SelectedEnemy<>nil) then 
         BattleProcessor.SelectedEnemy.Deselect();
-      if (CirclePic = nil) then CirclePic:= new PictureWPF(Sprite.Pos.X-65,Sprite.Pos.Y+Sprite.Height/2-40,'img\enemy\circle.png');
       CirclePic.Visible := True;
-      LockThis:=True;
-      BattleProcessor.SelectedEnemy:=self;
+      LockThis:= True;
+      BattleProcessor.SelectedEnemy:= self;
     end;
 
     procedure Deselect();
@@ -575,16 +580,14 @@ type
     procedure Damage(Dmg: integer); override;
     begin
       hp -= Dmg;
-      if (hp<=0) then Death()
-      else Sprite.PlayAnim('Hit');
+      if (hp<=0) then Death() else Sprite.PlayAnim('Hit');
     end;
 
     procedure Destroy(); override;
     begin
-      if (Sprite<>nil) then Sprite.Destroy();
-      Sprite := nil;
-      if (ShadowPic<>nil) then ShadowPic.Destroy();
-      if (CirclePic<>nil) then begin writeln('tt'); CirclePic.Destroy(); writeln('cc'); CirclePic := nil end;
+      if (Sprite<>nil) then Sprite.Destroy(); Sprite := nil;
+      if (ShadowPic<>nil) then ShadowPic.Destroy(); ShadowPic := nil;
+      if (CirclePic<>nil) then CirclePic.Destroy(); CirclePic := nil;
     end;
     
     property GetName: string read name;
@@ -613,7 +616,7 @@ type
       end);
       Sprite.AddAnim('Death', LoadSprites('enemy\Skeleton_Seeker\death', 5), 160, false);
       Sprite.PlayAnim('Idle');
-      ShadowPic.MoveTo(Sprite.Pos.X-65,Sprite.Pos.Y+Sprite.Height/2-40);
+      CreateCircleShadowPics(40);
     end;
     end;
   
@@ -637,7 +640,7 @@ type
       end);
       Sprite.AddAnim('Death', LoadSprites('enemy\Sprout\death', 8), 160, false);
       Sprite.PlayAnim('Idle');
-      ShadowPic.MoveTo(Sprite.Pos.X-65,Sprite.Pos.Y+Sprite.Height/2-45);
+      CreateCircleShadowPics(45);
     end;
     end;
   
@@ -661,6 +664,7 @@ type
       end);
       Sprite.AddAnim('Death', LoadSprites('enemy\Golem\death', 10), 160, false);
       Sprite.PlayAnim('Idle');
+      CreateCircleShadowPics(45);
     end;
     end;
   
@@ -679,8 +683,8 @@ type
       //loader.GetValue&<integer>('$.hp');
       max_hp:= 20;
       hp:= max_hp;
-      attackDmg:=8;
-      agility:=5;
+      attackDmg:= 8;
+      agility:= 5;
       Delay:= 250;
     end;
     
@@ -693,8 +697,10 @@ type
     procedure Damage(Dmg: integer);override;
     begin
       hp -= Dmg;
-      if (hp<=0) then begin Death(); hp := 0; end;
-      BattleProcessor.PlayerHPPanel.Text := hp +'/'+max_hp;
+      if (hp<=0) then begin
+        BattleProcessor.PlayerHPPanel.Text := hp +'/'+max_hp;
+        hp := 0; Death();
+      end;
     end;
     
     property GetHP: integer Read hp;
@@ -801,7 +807,6 @@ type
       LAGD.CombatPic := new PictureWPF(0, 0,'data\levels\LALevels\png\CombatField.png');
 
       BattleProcessor.EnemyList:= new List<IEnemy>();
-      writeln('Создано');
       for var i:= 0 to EnemyOnPoint.Length-1 do
         case (i+1) of
             1: CreateEnemy(i, 13, 5);

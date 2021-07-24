@@ -1271,7 +1271,7 @@
 							"px": [432,144],
 							"fieldInstances": [{
 								"__identifier": "Enemys",
-								"__value": [ "TreeEnemy", "TreeEnemy", "TreeEnemy", "TreeEnemy" ],
+								"__value": [ "TreeEnemy", "TreeEnemy", "Golem", "Golem" ],
 								"__type": "Array<LocalEnum.EnemyType>",
 								"defUid": 21,
 								"realEditorValues": [ {
@@ -1282,10 +1282,10 @@
 									"params": ["TreeEnemy"]
 								}, {
 									"id": "V_String",
-									"params": ["TreeEnemy"]
+									"params": ["Golem"]
 								}, {
 									"id": "V_String",
-									"params": ["TreeEnemy"]
+									"params": ["Golem"]
 								} ]
 							}]
 						},
