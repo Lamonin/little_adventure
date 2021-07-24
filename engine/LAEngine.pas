@@ -3,10 +3,7 @@
 uses Newtonsoft.Json.Linq;
 uses WPFObjects, Timers, Loader;
 
-//Опережающее описание процедур
-procedure CloseLevel(); forward;
-procedure ChangeLevel(lname:string); forward;
-
+//Вспомогательные методы для работы с объектами
 ///Проверяет - принадлежит ли точка прямоугольнику объекта
 function PtInside(x,y:real; obj:ObjectWPF):boolean;
 begin
@@ -20,16 +17,19 @@ begin
   var p := from; from := new PictureWPF(p.LeftTop, too); p.Destroy();
 end;
 
-function ApplyFontSettings(obj:ObjectWPF):ObjectWPF;
+function ApplyFontSettings(const obj:ObjectWPF):ObjectWPF;
 begin
-  obj.FontName := 'GranaPadano';
-  obj.FontColor := ARGB(255, 255, 214, 0);
-  obj.FontSize := 32;
-  obj.TextAlignment := Alignment.Center;
+  obj.FontName := 'GranaPadano'; obj.FontColor := ARGB(255, 255, 214, 0);
+  obj.FontSize := 32; obj.TextAlignment := Alignment.Center;
   Result := obj;
 end;
+//---------------------------------------------
 
+//Опережающее описание процедур
+procedure CloseLevel(); forward;
+procedure ChangeLevel(lname:string); forward;
 procedure DrawMainMenu(); forward;
+procedure DrawConfirmMenu(text:string; confirm, cancel:procedure); forward;
 
 type
   ///Получение и изменение значений в файле JSON формата.
@@ -42,7 +42,6 @@ type
     ///Говорим "обрабатывать" файл с JSON структурой по пути path
     constructor Create(path:string);
     begin
-      //Считываем текст из файла
       self.path := path;
       //Загружаем текстовый файл и преобразуем в структуру JSON.NET библиотеки
       jObj := JObject.Parse(ReadAllText(path, Encoding.UTF8));
@@ -70,7 +69,7 @@ type
     end;
     
     ///Сохраняет изменения в файле
-    procedure SaveFile() := WriteAllText(path,jObj.ToString(), Encoding.UTF8);
+    procedure SaveFile() := WriteAllText(path, jObj.ToString(), Encoding.UTF8);
   end;
   
   //##############-НАЧАЛО_ИНТЕРФЕЙС-################
@@ -136,8 +135,7 @@ type
     begin
       OnMouseDown -= Clicked; OnMouseUp -= Process;
       if (pic = nil) then exit;
-      pic.Destroy();
-      pic := nil;
+      pic.Destroy(); pic := nil;
     end;
     
     property Text: string read buttonText write SetText;
@@ -305,6 +303,7 @@ type
     property GetX: integer read;
     property GetY: integer read;
     property isBlocked: boolean read write;
+    property SetUsing: boolean write;
   end;
   
   levelGridRecord = record
@@ -681,6 +680,7 @@ type
           messageTimer.Stop();
         messageCount += 1;
       end);
+      
     end;
 
     procedure Use(); override;
@@ -693,10 +693,15 @@ type
       //Включаем интерфейс блока диалога, иначе добавляем следующий символ.
       if LAGD.DialogRect.Visible then
         messageNum += 1
-      else begin messageNum := 0; LAGD.DialogRect.Visible := true end;
+      else begin 
+        messageNum := 0; 
+        LAGD.DialogRect.Visible := true;
+        LAGD.Player.SetUsing := True; 
+      end;
 
       //Если показали все сообщения, то закрываем окно диалога.
       if (messageNum = messages.Length) then begin
+        LAGD.Player.SetUsing := False;
         LAGD.DialogRect.Visible := false; messageTimer.Stop();
         messageNum := 0; //Сбрасываем это значение.
         exit;
@@ -756,8 +761,10 @@ type
     end;
 
     public
+    static battleCellCount:integer;
     constructor Create(x,y: integer; EnemyOnPoint: array of string);
     begin
+      battleCellCount+=1;
       self.EnemyOnPoint := EnemyOnPoint;
       self.x := x; self.y := y;
       ePointAnim := new LSprite(x,y,'idle', LoadSprites('blue_fire',8));
@@ -769,6 +776,7 @@ type
     
     procedure Destroy(); override;
     begin 
+      battleCellCount -= 1;
       isCompleted := True;
       ePointAnim.Destroy(); ePointAnim := nil;
       LAGD.Player.OnMoveEvent -= procedure -> CheckPlayerDistance();
@@ -786,10 +794,64 @@ type
     ///Переход на следующий уровень.
     procedure Use(); override;
     begin
-      ChangeLevel(levelName);
+      if BattleCell.battleCellCount > 0 then
+        writeln('Ещё остались противники')
+      else
+        ChangeLevel(levelName);
     end;
     end;
   
+  PickableCell = class (UseObject)
+    private
+    sprite: PictureWPF;
+    isPickup: boolean; //Взаимодействовал ли персонаж игрока с объектом
+    ///Происходит "подбор" объекта
+    procedure Pickup(); virtual; begin isPickup := true; sprite.Destroy(); sprite := nil; end;
+
+    public
+    constructor Create(x,y:integer; path:string);
+    begin
+      sprite := new PictureWPF(x*48, y*48, path);
+    end;
+    procedure Use(); override; begin if not isPickup then Pickup(); end;
+    
+    procedure Destroy(); override;
+    begin
+      if sprite <> nil then sprite.Destroy();
+      Writeln('Поднимаемый объект уничтожен!');
+    end;
+    end;
+  
+  PotionPickup = class (PickableCell)
+    private
+    potionPower:integer := 10;
+    procedure Pickup(); override;
+    begin
+      inherited Pickup();
+      Writeln('Игрок восстановил ', potionPower, ' маны!');
+    end;
+    public
+    constructor Create(x,y:integer);
+    begin
+      inherited Create(x,y, 'img/potion.png');
+    end;
+    end;
+
+  ArmorPickup = class (PickableCell)
+    private
+    armorValue:integer := 10;
+    procedure Pickup(); override;
+    begin
+      inherited Pickup();
+      Writeln('Игрок получил ', armorValue, ' брони!');
+    end;
+    public
+    constructor Create(x,y:integer);
+    begin
+      inherited Create(x,y, 'img/armor.png');
+    end;
+    end;
+
   ///Класс игрока в "мире".
   PlayerWorld = class (IPlayerWorld)
     private
@@ -816,10 +878,9 @@ type
     begin
       useRect.Visible := False; //По умолчани делаем его False
       var obj := LAGD.Grid[GetY, GetX].GridObject;
-      if (obj <> nil) and (obj is NextLevelCell) then begin
-        useRect.Visible := True;
-        exit;
-      end;
+      if (obj <> nil) then
+        if (obj is NextLevelCell) then begin useRect.Visible := True; exit; end
+        else if (obj is PickableCell) then begin obj.Use(); exit; end;
       
       var dx := 0; var dy := 0;
       case self.dir of 
@@ -828,10 +889,11 @@ type
         'up': dy := -1;
         'down': dy := 1;
       end;
+
+      if (GetX+dx<0) or (GetX+dx>26) or (GetY+dy<0) or (GetY+dy>15) then exit;
       
       obj := LAGD.Grid[GetY+dy, GetX+dx].GridObject;
-      if (obj<>nil) and not (obj is NextLevelCell) and not (obj is BattleCell) then
-        useRect.Visible := True;
+      if (obj<>nil) and (obj is MessageCell) then useRect.Visible := True;
     end;
     
     public
@@ -910,6 +972,7 @@ type
       
     procedure UseGrid();
     begin
+      if not useRect.Visible then exit;
       var obj := LAGD.Grid[GetY, GetX].GridObject;
       if (obj <> nil) and (obj is NextLevelCell) then begin
         obj.Use(); exit;
@@ -942,6 +1005,7 @@ type
     property GetX: integer read position.x;
     property GetY: integer read position.y;
     property isBlocked: boolean read blocked write Blocking;
+    property SetUsing: boolean write isUsing;
   end;
   
   TransitionPic = class (ITransitionPic)
@@ -1051,6 +1115,8 @@ type
           var tt:= val[j]['fieldInstances'][0]['__value'].ToObject&<array of string>();
           cell.GridObject := new BattleCell(x,y,tt);
         end;
+        'Armor': cell.GridObject := new ArmorPickup(x,y);
+        'Potion': cell.GridObject := new PotionPickup(x,y);
       end;
       LAGD.Grid[y,x] := cell;
     end;
