@@ -305,6 +305,11 @@ type
     property isBlocked: boolean read write;
     property SetUsing: boolean write;
   end;
+
+  IDialogHandler = interface
+    procedure StartDialog(messages:array of string);
+    function NextMessage():boolean;
+  end;
   
   levelGridRecord = record
     CantGet:boolean; //Можно ли ступить на клетку
@@ -321,6 +326,7 @@ type
     static Grid:levelGridArr; //Сетка уровня
     static LevelPic, CombatPic, backgroundPic, DialogRect:PictureWPF; //Изображения уровня, поля битвы и заднего фона меню
     static TransPic:ITransitionPic; //Экран перехода
+    static DialogHandler:IDialogHandler;
   end;
   
   IBattleEntity = interface
@@ -657,6 +663,60 @@ type
     end;
     end;
 
+  DialogHandler = class(IDialogHandler)
+    private
+    messages : array of string;
+    messageNum, messageCount:integer; //Текущий номер сообщения и текущий символ сообщения
+    messageTimer:Timer;
+    isDialogue: boolean; //Идёт ли диалог
+    procedure EndDialogue();
+    begin
+      LAGD.Player.SetUsing := False;
+      LAGD.DialogRect.Visible := false;
+      messageTimer.Stop();
+      isDialogue := False;
+    end;
+    public
+    constructor Create();
+    begin
+      messageTimer := new Timer(16, procedure() -> begin
+        LAGD.DialogRect.Text += messages[messageNum][messageCount];
+        if (messageCount = messages[messageNum].Length) then
+          messageTimer.Stop();
+        messageCount += 1;
+      end);
+    end;
+
+    procedure StartDialog(messages:array of string);
+    begin
+      messageNum := -1; messageCount := 1;
+      self.messages := messages; //Сохраняем сообщения
+      LAGD.DialogRect.Visible := True;
+      LAGD.Player.SetUsing := True;
+      isDialogue := True;
+      NextMessage();
+    end;
+
+    function NextMessage():boolean;
+    begin
+      if not isDialogue then exit;
+      Result:=True; //Диалог может продолжаться
+      if (messageTimer.Enabled) then
+      begin
+        messageTimer.Stop(); LAGD.DialogRect.Text := messages[messageNum]; exit;
+      end;
+      messageNum += 1;
+
+      //Если показали все сообщения, то закрываем окно диалога.
+      if (messageNum = messages.Length) then begin
+        EndDialogue(); exit;
+      end;
+      //Начинаем с первого символа сообщения и пустого текста в окне сообщений
+      messageCount := 1; LAGD.DialogRect.Text := '';
+      messageTimer.Start();
+    end;
+  end;
+  
   UseObject = class(IUseObject)
     public
     procedure Use(); virtual;
@@ -668,47 +728,16 @@ type
   MessageCell = class (UseObject)
     private
     messages : array of string;
-    messageNum, messageCount:integer; //Текущий номер сообщения и текущий символ сообщения
-    messageTimer:Timer;
     public
     constructor Create(messages:array of string);
     begin
-      self.messages := messages; //Сохраняем сообщения
-      messageTimer := new Timer(16, procedure() -> begin
-        LAGD.DialogRect.Text += messages[messageNum][messageCount];
-        if (messageCount = messages[messageNum].Length) then
-          messageTimer.Stop();
-        messageCount += 1;
-      end);
-      
+      self.messages := messages;
     end;
 
     procedure Use(); override;
     begin
-      if (messageTimer.Enabled) then
-      begin
-        messageTimer.Stop(); LAGD.DialogRect.Text := messages[messageNum]; exit;
-      end;
-
-      //Включаем интерфейс блока диалога, иначе добавляем следующий символ.
-      if LAGD.DialogRect.Visible then
-        messageNum += 1
-      else begin 
-        messageNum := 0; 
-        LAGD.DialogRect.Visible := true;
-        LAGD.Player.SetUsing := True; 
-      end;
-
-      //Если показали все сообщения, то закрываем окно диалога.
-      if (messageNum = messages.Length) then begin
-        LAGD.Player.SetUsing := False;
-        LAGD.DialogRect.Visible := false; messageTimer.Stop();
-        messageNum := 0; //Сбрасываем это значение.
-        exit;
-      end;
-      //Начинаем с первого символа сообщения и пустого текста в окне сообщений
-      messageCount := 1; LAGD.DialogRect.Text := '';
-      messageTimer.Start();
+      if (LAGD.DialogHandler <> nil) then 
+        LAGD.DialogHandler.StartDialog(messages);
     end;
     end;
   
@@ -794,8 +823,10 @@ type
     ///Переход на следующий уровень.
     procedure Use(); override;
     begin
-      if BattleCell.battleCellCount > 0 then
-        writeln('Ещё остались противники')
+      if BattleCell.battleCellCount > 0 then begin
+        var messages:array of string := ('За моей спиной остались противники, я не могу быть небрежным!');
+        LAGD.DialogHandler.StartDialog(messages);
+      end
       else
         ChangeLevel(levelName);
     end;
@@ -1150,8 +1181,6 @@ type
   end;
   
   //РАЗДЕЛ ОПИСАНИЯ ГЛАВНОГО МЕНЮ
-  
-  
   procedure DrawConfirmMenu(text:string; confirm, cancel:procedure);
   var b_confirm, b_cancel: LAButton;
   begin
@@ -1258,6 +1287,7 @@ type
     Window.CenterOnScreen();
     LAGD.backgroundPic := new PictureWPF(0,0, 'img\MainMenuField1.png');   
     if (LAGD.TransPic = nil) then LAGD.TransPic := new TransitionPic();
+    if (LAGD.DialogHandler = nil) then LAGD.DialogHandler := new DialogHandler();
     if (LAGD.DialogRect = nil) then Redraw(procedure() -> begin
         LAGD.DialogRect := new PictureWPF(0,768-128,'img\ui\rect_game_big.png');
         LAGD.DialogRect.FontSize := 24;

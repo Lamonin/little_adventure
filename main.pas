@@ -7,7 +7,10 @@ begin
   ///Если возможно, то скрываем изображение перехода
   if (LAGD.TransPic.CanHide) and (k = Key.Space) then LAGD.TransPic.Hide();
   if (LAGD.Player = nil) or (LAGD.Player.isBlocked) then exit;
-  if (k = key.E) then LAGD.Player.UseGrid();
+  if (k = key.E) then begin
+    if (LAGD.DialogHandler<>nil) and (LAGD.DialogHandler.NextMessage) then exit;
+    LAGD.Player.UseGrid();
+  end;
   if (k = Key.W) or (k = key.Up) then
     LAGD.Player.MoveOn(0, -1, 'up')
   else if (k = Key.S) or (k = key.Down) then
