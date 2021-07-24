@@ -1262,13 +1262,13 @@
 						},
 						{
 							"__identifier": "EnemyPoint",
-							"__grid": [13,10],
+							"__grid": [9,3],
 							"__pivot": [0,0],
 							"__tile": null,
 							"width": 48,
 							"height": 48,
 							"defUid": 18,
-							"px": [624,480],
+							"px": [432,144],
 							"fieldInstances": [{
 								"__identifier": "Enemys",
 								"__value": [ "TreeEnemy", "TreeEnemy", "TreeEnemy", "TreeEnemy" ],

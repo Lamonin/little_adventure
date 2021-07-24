@@ -20,8 +20,7 @@ end;
 function ApplyFontSettings(const obj:ObjectWPF):ObjectWPF;
 begin
   obj.FontName := 'GranaPadano'; obj.FontColor := ARGB(255, 255, 214, 0);
-  obj.FontSize := 32; obj.TextAlignment := Alignment.Center;
-  Result := obj;
+  obj.FontSize := 32; obj.TextAlignment := Alignment.Center; Result := obj;
 end;
 //---------------------------------------------
 
@@ -35,9 +34,7 @@ type
   ///Получение и изменение значений в файле JSON формата.
   LALoader = class
     private
-    jObj:JObject; //Хранит весь наш файл для дальнейшней работы с ним
-    path:string;
-    
+    path:string; jObj:JObject; //Хранит весь наш файл для дальнейшней работы с ним
     public
     ///Говорим "обрабатывать" файл с JSON структурой по пути path
     constructor Create(path:string);
@@ -78,8 +75,7 @@ type
   ///b.OnClick += procedure() -> begin КОД КОТОРЫЙ ВЫПОЛНИТСЯ ПРИ НАЖАТИИ КНОПКИ end;
   LAButton = class
     private
-    pic:PictureWPF;
-    isClicked:boolean;
+    pic:PictureWPF; isClicked:boolean;
     idlePic, clickPic, buttonText:string;
     
     ///Изменение спрайта на clickPic
@@ -89,8 +85,7 @@ type
       if (mousebutton <> 1) and (isClicked) then exit;
       if PtInside(x,y,pic) then begin
         isClicked := True;
-        ChangePicture(pic, clickPic);
-        ApplyText();
+        ChangePicture(pic, clickPic); ApplyText();
       end;
     end;
     
@@ -147,7 +142,7 @@ type
     frames:array of string; //Кадры анимации.
     speed:integer; //Скорость анимации.
     isLoop:boolean; //Зациклена ли анимация.
-    NextAnim:procedure; //Имеет смысл только если анимация не зациклена.
+    AnimProcedure:procedure; //Имеет смысл только если анимация не зациклена.
   end;
   
   LSprite = class
@@ -177,7 +172,7 @@ type
       else if curAnim.isLoop then frameNum:=0
       else begin 
         updater.Stop(); 
-        if (curAnim.NextAnim<>nil) then curAnim.NextAnim;
+        if (curAnim.AnimProcedure<>nil) then curAnim.AnimProcedure;
         exit;
       end;
       ChangeSprite();
@@ -228,10 +223,10 @@ type
     end;
     
     ///Добавляет новую анимацию с именем aname
-    procedure AddAnim(aname:string; frames:array of string; speed:integer; looped:boolean; nextAnim:procedure:=nil);
+    procedure AddAnim(aname:string; frames:array of string; speed:integer; looped:boolean; AnimProcedure:procedure:=nil);
     begin
       var frame:spriteInfo;
-      frame.frames:= frames; frame.speed:=speed; frame.isLoop:=looped; frame.NextAnim:= nextAnim;
+      frame.frames:= frames; frame.speed:=speed; frame.isLoop:=looped; frame.AnimProcedure:= AnimProcedure;
       anims.Add(aname, frame);
     end;
     
@@ -262,6 +257,8 @@ type
     property CurrentFrameCount: Integer Read GetFrameCount;
     ///Видимость спрайта
     property Visible: boolean write isVisible read isVisible;
+    property Width: integer read floor(sprite.Width);
+    property Height: integer read floor(sprite.Height);
   end;
   
   ///Загружает спрайт с именем sname.
@@ -331,35 +328,72 @@ type
   
   IBattleEntity = interface
     procedure Destroy();
-    procedure Death();
     procedure Damage(Dmg: integer);
-    procedure Attack(E: IBattleEntity); 
-    property ThisLock: Boolean Read Write;   
-    property Pname: string Read Write ;
-    property PicC: PictureWPF Read Write;
+    procedure Attack();
+    function AddAction():boolean;
+    property GetDelay: integer Read;
+    property GetDeath: boolean Read;
+  end;
+  
+  IEnemy = interface (IBattleEntity)
+    procedure Select();
+    procedure Deselect();
+    property GetName:string read;
+    property GetCirclePic: PictureWPF read;
+    property SetLockThis: boolean write;
+  end;
+  
+  IBattlePlayer = interface (IBattleEntity)
     property GetHP: integer Read;
     property GetMaxHP: integer Read;
     property GetDamage: integer Read;
-    property GetDelay: integer Read;
-    Function AddAction():boolean;
   end;
-  //КОНЕЦ ОПИСАНИЯ ИНТЕРФЕЙСНОЙ ЧАСТИ
   
-  //event EndBattleEvent:procedure;
-  //type
+  //КОНЕЦ ОПИСАНИЯ ИНТЕРФЕЙСНОЙ ЧАСТИ
+
+  BattleEntity = class (IBattleEntity)
+    private
+    hp, attackDmg, agility, actionPoint, delay : integer;
+    isDeath:boolean;
+    public
+    constructor Create(); begin end;
+     
+    function AddAction():boolean;
+    begin
+      if isDeath then exit;
+      actionPoint+= agility;
+      if actionPoint >=10 then 
+      begin
+        actionPoint-=10;
+        result:= true;
+      end;
+    end;
+    
+    procedure Destroy(); virtual; begin end;
+    procedure Damage(Dmg: integer);virtual; begin end;
+    procedure Attack();virtual; begin end;
+    
+    property GetDelay: integer Read delay;
+    property GetDeath: boolean Read isDeath;
+  end;
+
   BattleProcessor = class
     private
     static CombatTimer, ProcessTimer : Timer;
     static Stoptimer, isPlayerTurn: boolean;
-    static ListEnemy: List<IBattleEntity>;
-    static PPlayerBattle, SLEnemy: IBattleEntity;
     static BattleEnemyPanel, PlayerDamagePanel, PlayerArmorPanel, PlayerHPPanel, TurnRect : PictureWPF;
     static b_attack, b_run, b_items:LAButton;
-    
+
     public
+    static EnemyList: List<IEnemy>;
+    static PlayerBattle:IBattlePlayer;
+    static SelectedEnemy: IEnemy;
+    static OnBattleEndEvent: procedure;
+    static enemyCount:integer;
     static procedure EndBattle(Res:string);
     begin
       CombatTimer.Stop(); ProcessTimer.Stop(); Stoptimer := false; PlayerStep := false;
+      
       LAGD.Grid[LAGD.Player.GetY, LAGD.Player.GetX].GridObject.Destroy();
       var t:Timer;
       t := new Timer(1000, procedure() -> begin
@@ -382,8 +416,8 @@ type
         b_attack.Destroy(); b_items.Destroy(); b_run.Destroy();
         BattleEnemyPanel.Destroy(); PlayerDamagePanel.Destroy(); PlayerArmorPanel.Destroy();
         PlayerHPPanel.Destroy(); TurnRect.Destroy();
-        
-        foreach var t in ListEnemy do begin t.Destroy(); end; // Уничтожаем врагов
+
+        foreach var tc in BattleProcessor.EnemyList do begin tc.Destroy(); end; // Уничтожаем врагов
         LAGD.CombatPic.Destroy();
         t.Stop();
       end);
@@ -401,16 +435,15 @@ type
         exit;
       end;
       ProcessTimer.Interval:= ActionList[I].GetDelay;
-      
       //Ходит игрок
-      if ActionList[I].Pname = 'Player' then begin 
+      if ActionList[I] is IBattlePlayer then begin 
         isPlayerTurn:= true; 
         TurnRect.Text := 'ВАШ ХОД';
         I+=1;
         exit; 
       end;
-      TurnRect.Text := 'ХОД ПРОТИВНИКА'; 
-      ActionList[I].Attack(PPlayerBattle);
+      TurnRect.Text := 'ХОД ПРОТИВНИКА';
+      ActionList[I].Attack();
       I+=1;
      end);
      ProcessTimer.Start;
@@ -422,12 +455,10 @@ type
       b_attack:= new LAButton(167, 692, 'rect_button_battle.png', 'rect_button_battle_click.png');
       b_attack.Text := 'АТАКА';
       b_attack.OnClick += procedure() -> begin
-        if (BattleProcessor.PlayerStep) and (BattleProcessor.selectedEnemy<> nil) then
+        if (BattleProcessor.PlayerStep) and (BattleProcessor.SelectedEnemy<> nil) then
         begin BattleProcessor.PlayerStep:= false;
-          BattleProcessor.PlayerBattle.Attack(BattleProcessor.SLEnemy);
-          BattleProcessor.selectedEnemy.PicC.Destroy;
-          BattleProcessor.selectedEnemy.ThisLock:= false;
-          BattleProcessor.selectedEnemy:=nil;
+          BattleProcessor.PlayerBattle.Attack();
+          BattleProcessor.SelectedEnemy.Deselect();
         end;
       end;
        
@@ -443,7 +474,7 @@ type
       BattleEnemyPanel:= new PictureWPF(167, 616, 'img\ui\rect_panel_battle.png');
       BattleEnemyPanel := ApplyFontSettings(BattleEnemyPanel) as PictureWPF;
 
-      foreach var t in ListEnemy do BattleEnemyPanel.Text += t.Pname + '  |  ';
+      foreach var t in EnemyList do BattleEnemyPanel.Text += t.GetName + '  |  ';
       BattleEnemyPanel.Text :=  Copy(BattleEnemyPanel.Text, 1, BattleEnemyPanel.Text.Length - 5);
       
       PlayerHPPanel := new PictureWPF(167, 572, 'img\ui\hp_bar.png');
@@ -452,23 +483,23 @@ type
       var icon := new PictureWPF(0,0,'img\ui\icon_hp.png');
       PlayerHPPanel.AddChild(icon, Alignment.LeftTop);
       PlayerHPPanel := ApplyFontSettings(PlayerHPPanel) as PictureWPF;
-      BattleProcessor.PlayerHPPanel.Text := PPlayerBattle.GetHP +'/'+PPlayerBattle.GetMaxHP;
+      BattleProcessor.PlayerHPPanel.Text := PlayerBattle.GetHP +'/'+PlayerBattle.GetMaxHP;
       
       icon := new PictureWPF(0,0,'img\ui\icon_armor.png');
       PlayerArmorPanel.AddChild(icon, Alignment.LeftTop);
       icon := new PictureWPF(0,0,'img\ui\icon_damage.png');
       PlayerDamagePanel.AddChild(icon, Alignment.LeftTop);
       PlayerDamagePanel := ApplyFontSettings(PlayerDamagePanel) as PictureWPF;
-      PlayerDamagePanel.Text := PPlayerBattle.GetDamage.ToString();
+      PlayerDamagePanel.Text := PlayerBattle.GetDamage.ToString();
       //Закончили инициализацию интерфейса
-      
+
       CombatTimer := new Timer(250, procedure() ->
       begin
-        if (stopTimer) then exit;
-        if (ListEnemy.Count = 0) then EndBattle('Win'); 
+        if (StopTimer) then exit;
+        if (enemyCount <= 0) then EndBattle('Win'); 
         var ActionList:= new List<IBattleEntity>();
-        foreach var t in ListEnemy do if t.AddAction() then ActionList.Add(t);                 
-        if PPlayerBattle.AddAction() then ActionList.Add(PPlayerBattle);
+        foreach var t in EnemyList do if t.AddAction() then ActionList.Add(t);                 
+        if PlayerBattle.AddAction() then ActionList.Add(PlayerBattle);
         if (ActionList.Count>0) then
         begin       
           Stoptimer:= true;
@@ -478,181 +509,185 @@ type
       end;
     static property PBattleEnemyPanel: PictureWPF read BattleEnemyPanel write BattleEnemyPanel;
     static property PlayerStep: boolean Read isPlayerTurn write isPlayerTurn;
-    static property PlayerBattle: IBattleEntity Read PPlayerBattle Write PPlayerBattle; 
-    static property EnemyList: List<IBattleEntity> Read ListEnemy Write ListEnemy;
-    static property selectedEnemy: IBattleEntity Read SLEnemy Write SLEnemy;
   end;
 
-  BattleEntity = class(IBattleEntity)
+  Enemy = class(BattleEntity, IEnemy)
     private
-     name: string;
-     hp, max_hp, attackDmg, agility, actionPoint, delay : integer;
-     Sprite : LSprite;
-     LockThis : boolean;
-     CPic: PictureWPF;
-     
-     ///Нажатие на врага в бою
-     procedure klik(x, y: real; mousebutton: integer);
-     begin
-       if (Sprite <> nil) and (mousebutton=1) and (Sprite.PtInside(x,y)) and not(ThisLock) then begin
-        if (BattleProcessor.SLEnemy<>nil) then
-         begin
-           BattleProcessor.SLEnemy.PicC.Destroy;        
-           BattleProcessor.SLEnemy.ThisLock:= false;
-         end;
-         PicC:= new PictureWPF(Sprite.Pos.X-65,Sprite.Pos.Y+15,'img\enemy\circle.png');
-         ThisLock:=true;
-         BattleProcessor.SLEnemy:=self; 
-       end;
-     end;
-     
-    public
-     constructor Create();
-     begin
-       OnMouseDown += klik;
-     end;
-     
-     function AddAction():boolean;
-     begin
-       actionPoint+= agility;
-       if actionPoint >=10 then 
-       begin
-         actionPoint-=10;
-         result:= true;
-       end;
-     end;
-    
-     procedure Destroy();
-     begin
-       if (Sprite<>nil) then Sprite.Destroy();
-       Sprite := nil;
-       if (CPic<>nil) then CPic.Destroy();
-     end;
-      
-     procedure Death();virtual;
-     begin
-      BattleProcessor.EnemyList.Remove(self);
+    name:string;
+    Sprite : LSprite;
+    LockThis, isDeath: boolean; //Выбран ли этот враг
+    CirclePic, ShadowPic: PictureWPF; //Круг выделения и тень
+    ///Нажатие на врага в бою
+    procedure klik(x, y: real; mousebutton: integer);
+    begin
+      if (Sprite <> nil) and (mousebutton=1) and (Sprite.PtInside(x,y)) and not (LockThis) then 
+      begin
+        Select();
+      end;
+    end;
+
+    procedure Death();
+    begin
+      isDeath := True;
+      BattleProcessor.enemyCount -= 1;
       OnMouseDown -= klik;
       Sprite.PlayAnim('Death');
-     end;
-      
-     procedure Damage(Dmg: integer);virtual;
-      begin
-        hp -= Dmg;
-        if (hp<=0) then Death()
-        else Sprite.PlayAnim('Hit');
-      end;
-      
-     procedure Attack(E: IBattleEntity);virtual;      
-      begin
-        if (E = nil) or (E.GetHP <=0) then exit;
-        E.Damage(AttackDmg);
-        Sprite.PlayAnim('Attack');
-      end;
-      
-      property GetDelay: integer Read delay;
-      property GetHP: integer Read hp;
-      property GetMaxHP: integer Read max_hp;
-      property GetDamage: integer Read attackDmg;
-      property Pname: string Read name Write name;
-      property ThisLock: Boolean Read LockThis Write LockThis;
-      property PicC: PictureWPF Read CPic Write CPic;
-  end;
-  
-  SkeletonEnemy = class(BattleEntity)
-   public
-   constructor Create(X, Y:integer);
-   begin
-     attackDmg:=2;
-     agility:=4;
-     hp:= 10;
-     name := 'СКЕЛЕТОН';
-     Delay:= 2000;
-     Sprite:= new LSprite(X,Y,'Idle',LoadSprites('enemy\Skeleton_Seeker\idle', 6));
-     Sprite.AddAnim('Hit', LoadSprites('enemy\Skeleton_Seeker\hit', 4), 160, false, procedure()->
-     begin
-       sprite.PlayAnim('Idle'); 
-     end);
-     Sprite.AddAnim('Attack', LoadSprites('enemy\Skeleton_Seeker\attack', 10), 160, false, procedure()->
-     begin
-      sprite.PlayAnim('Idle'); 
-     end);
-     Sprite.AddAnim('Death', LoadSprites('enemy\Skeleton_Seeker\death', 5), 160, false, procedure () -> Destroy());
-     Sprite.PlayAnim('Idle');
-   end;
-  end;
-  
-  TreeEnemy = class(BattleEntity)
-   public
-   constructor Create(X, Y:integer);
-    begin
-     attackDmg:=4;
-     agility:=2;
-     hp:=15;
-     name := 'ДРЕВО';
-     Delay:= 2000;
-     Sprite:= new LSprite(X,Y,'Idle',LoadSprites('enemy\Sprout\idle', 4));
-     Sprite.AddAnim('Hit', LoadSprites('enemy\Sprout\hit', 5), 160, false, procedure()->
-     begin
-       sprite.PlayAnim('Idle'); 
-     end);
-     Sprite.AddAnim('Attack', LoadSprites('enemy\Sprout\attack', 6), 160, false, procedure()->begin
-       Sprite.PlayAnim('Idle'); 
-     end);
-     Sprite.AddAnim('Death', LoadSprites('enemy\Sprout\death', 8), 160, false, procedure() -> begin 
-       Destroy();
-     end);
-     Sprite.PlayAnim('Idle');
     end;
-   end;
-  
-  GolemEnemy = class(BattleEntity)
+    
+    function GetCircle():PictureWPF;
+    begin
+      if (CirclePic<>nil) then Result := CirclePic;
+    end;
+
     public
-    constructor Create(X, Y:integer);
+    constructor Create(x,y:integer);
     begin
-     attackDmg:=10;
-     agility:=1;
-     hp:=30;
-     name := 'ГОЛЕМ <БОСС>';
-     Delay:= 2000;
-     Sprite:= new LSprite(X,Y,'Idle',LoadSprites('enemy\Golem\idle', 6));
-     Sprite.AddAnim('Hit', LoadSprites('enemy\Golem\hit', 4), 160, false, procedure()->
-     begin
-       sprite.PlayAnim('Idle');
-     end);
-     Sprite.AddAnim('Attack', LoadSprites('enemy\Golem\attack', 8), 160, false, procedure()->begin
-       Sprite.PlayAnim('Idle');
-     end);
-     Sprite.AddAnim('Death', LoadSprites('enemy\Golem\death', 10), 160, false, procedure() -> begin 
-       Destroy();
-     end);
-     Sprite.PlayAnim('Idle');
+      BattleProcessor.OnBattleEndEvent += procedure -> Destroy();
+      BattleProcessor.enemyCount += 1;
+      ShadowPic := new PictureWPF(0, 0, 'img\enemy\shadow.png');
+      OnMouseDown += klik;
+    end;
+
+    procedure Select();
+    begin
+      if (BattleProcessor.SelectedEnemy<>nil) then 
+        BattleProcessor.SelectedEnemy.Deselect();
+      if (CirclePic = nil) then CirclePic:= new PictureWPF(Sprite.Pos.X-65,Sprite.Pos.Y+Sprite.Height/2-40,'img\enemy\circle.png');
+      CirclePic.Visible := True;
+      LockThis:=True;
+      BattleProcessor.SelectedEnemy:=self;
+    end;
+
+    procedure Deselect();
+    begin
+      BattleProcessor.SelectedEnemy.GetCirclePic.Visible := false;    
+      BattleProcessor.SelectedEnemy.SetLockThis:= false;
+      BattleProcessor.SelectedEnemy := nil;
+    end;
+
+    procedure Attack(); override;      
+    begin
+      if (isDeath) or (BattleProcessor.PlayerBattle.GetHP <= 0) then exit;
+      BattleProcessor.PlayerBattle.Damage(attackDmg);
+      Sprite.PlayAnim('Attack');
+    end;
+    
+    procedure Damage(Dmg: integer); override;
+    begin
+      hp -= Dmg;
+      if (hp<=0) then Death()
+      else Sprite.PlayAnim('Hit');
+    end;
+
+    procedure Destroy(); override;
+    begin
+      if (Sprite<>nil) then Sprite.Destroy();
+      Sprite := nil;
+      if (ShadowPic<>nil) then ShadowPic.Destroy();
+      if (CirclePic<>nil) then begin writeln('tt'); CirclePic.Destroy(); writeln('cc'); CirclePic := nil end;
+    end;
+    
+    property GetName: string read name;
+    property GetCirclePic: PictureWPF read GetCircle;
+    property SetLockThis: boolean write LockThis;
+    end;
+  
+  SkeletonEnemy = class(Enemy)
+    public
+    constructor Create(x, y:integer);
+    begin
+      inherited Create(x,y);
+      name := 'СКЕЛЕТОН';
+      hp:= 10;
+      attackDmg:=2;
+      agility:=4;
+      Delay:= 2000;
+      Sprite:= new LSprite(x,y,'Idle',LoadSprites('enemy\Skeleton_Seeker\idle', 6));
+      Sprite.AddAnim('Hit', LoadSprites('enemy\Skeleton_Seeker\hit', 4), 160, false, procedure()->
+      begin
+        sprite.PlayAnim('Idle'); 
+      end);
+      Sprite.AddAnim('Attack', LoadSprites('enemy\Skeleton_Seeker\attack', 10), 160, false, procedure()->
+      begin
+      sprite.PlayAnim('Idle'); 
+      end);
+      Sprite.AddAnim('Death', LoadSprites('enemy\Skeleton_Seeker\death', 5), 160, false);
+      Sprite.PlayAnim('Idle');
+      ShadowPic.MoveTo(Sprite.Pos.X-65,Sprite.Pos.Y+Sprite.Height/2-40);
     end;
     end;
   
-  BattlePlayer = class(BattleEntity)
+  TreeEnemy = class(Enemy)
+    public
+    constructor Create(x, y:integer);
+    begin
+      inherited Create(x,y);
+      name := 'ДРЕВО';
+      attackDmg:=4;
+      agility:=2;
+      hp:=15;
+      Delay:= 2000;
+      Sprite:= new LSprite(x,y,'Idle',LoadSprites('enemy\Sprout\idle', 4));
+      Sprite.AddAnim('Hit', LoadSprites('enemy\Sprout\hit', 5), 160, false, procedure()->
+      begin
+        sprite.PlayAnim('Idle'); 
+      end);
+      Sprite.AddAnim('Attack', LoadSprites('enemy\Sprout\attack', 6), 160, false, procedure()->begin
+        Sprite.PlayAnim('Idle'); 
+      end);
+      Sprite.AddAnim('Death', LoadSprites('enemy\Sprout\death', 8), 160, false);
+      Sprite.PlayAnim('Idle');
+      ShadowPic.MoveTo(Sprite.Pos.X-65,Sprite.Pos.Y+Sprite.Height/2-45);
+    end;
+    end;
+  
+  GolemEnemy = class(Enemy)
+    public
+    constructor Create(x, y:integer);
+    begin
+      inherited Create(x,y);
+      name := 'ГОЛЕМ <БОСС>';
+      attackDmg:=10;
+      agility:=1;
+      hp:=30;
+      Delay:= 2000;
+      Sprite:= new LSprite(x, y, 'Idle', LoadSprites('enemy\Golem\idle', 6));
+      Sprite.AddAnim('Hit', LoadSprites('enemy\Golem\hit', 4), 160, false, procedure()->
+      begin
+        sprite.PlayAnim('Idle');
+      end);
+      Sprite.AddAnim('Attack', LoadSprites('enemy\Golem\attack', 8), 160, false, procedure()->begin
+        Sprite.PlayAnim('Idle');
+      end);
+      Sprite.AddAnim('Death', LoadSprites('enemy\Golem\death', 10), 160, false);
+      Sprite.PlayAnim('Idle');
+    end;
+    end;
+  
+  BattlePlayer = class(BattleEntity, IBattlePlayer)
+    private
+    max_hp:integer; //Максимальное здоровье игрока
+    procedure Death();
+    begin
+      Writeln('Игрок проиграл');
+      BattleProcessor.EndBattle('Lose');
+    end;
     public
     constructor Create();
     begin
       var loader := new LALoader('data/userdata.json');
-      hp := 20; //loader.GetValue&<integer>('$.hp');
-      max_hp:=hp;
+      //loader.GetValue&<integer>('$.hp');
+      max_hp:= 20;
+      hp:= max_hp;
       attackDmg:=8;
       agility:=5;
-      name:= 'Player';
       Delay:= 250;
     end;
     
-    procedure Attack(E: IBattleEntity);override;      
+    procedure Attack();override;      
     begin
-      if (E = nil) then exit; 
-      E.Damage(AttackDmg);
-    end;
-        
-    procedure Death();override;
-    begin
-      Writeln('Игрок проиграл');
-      BattleProcessor.EndBattle('Lose');
+      if (BattleProcessor.SelectedEnemy = nil) then exit; 
+      BattleProcessor.SelectedEnemy.Damage(AttackDmg);
     end;
         
     procedure Damage(Dmg: integer);override;
@@ -661,8 +696,13 @@ type
       if (hp<=0) then begin Death(); hp := 0; end;
       BattleProcessor.PlayerHPPanel.Text := hp +'/'+max_hp;
     end;
+    
+    property GetHP: integer Read hp;
+    property GetMaxHP: integer Read max_hp;
+    property GetDamage: integer Read attackDmg;
     end;
-
+  
+  
   DialogHandler = class(IDialogHandler)
     private
     messages : array of string;
@@ -719,10 +759,8 @@ type
   
   UseObject = class(IUseObject)
     public
-    procedure Use(); virtual;
-    begin end;
-    procedure Destroy(); virtual;
-    begin end;
+    procedure Use(); virtual; begin end;
+    procedure Destroy(); virtual; begin end;
   end;
   
   MessageCell = class (UseObject)
@@ -759,11 +797,11 @@ type
       if (LAGD.Player.GetX <> x) or (LAGD.Player.GetY <> y) then exit;
       //Начинаем бой, если игрок стоит на точке начала боя.
       ePointAnim.Visible := False;
-
       LAGD.Player.isBlocked := true; //Блокируем управление игроком
       LAGD.CombatPic := new PictureWPF(0, 0,'data\levels\LALevels\png\CombatField.png');
 
-      BattleProcessor.EnemyList:= new List<IBattleEntity>();
+      BattleProcessor.EnemyList:= new List<IEnemy>();
+      writeln('Создано');
       for var i:= 0 to EnemyOnPoint.Length-1 do
         case (i+1) of
             1: CreateEnemy(i, 13, 5);
@@ -772,7 +810,7 @@ type
             4: CreateEnemy(i, 7, 5);
             5: CreateEnemy(i, 19, 5);
         end;
-
+      
       if (BattleProcessor.PlayerBattle = nil) then 
         BattleProcessor.PlayerBattle:= new BattlePlayer;
       BattleProcessor.StartBattle();
@@ -780,7 +818,7 @@ type
 
     procedure CreateEnemy(Index:integer; X,Y:integer);
     begin
-      var E: BattleEntity;
+      var E: IEnemy;
       case EnemyOnPoint[Index] of
         'Skeleton': E:= new SkeletonEnemy(X,Y);
         'TreeEnemy': E:= new TreeEnemy(X,Y);
