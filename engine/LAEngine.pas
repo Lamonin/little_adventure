@@ -323,7 +323,7 @@ type
     public
     static Player:IPlayerWorld; //Игрок в мире
     static Grid:levelGridArr; //Сетка уровня
-    static LevelPic, CombatPic, BgPic, DialogRect:PictureWPF; //Изображения уровня, поля битвы и заднего фона меню
+    static LevelPic, CombatPic, BgPic:PictureWPF; //Изображения уровня, поля битвы и заднего фона меню
     static TransPic:ITransitionPic; //Экран перехода
     static DialogHandler:IDialogHandler;
   end;
@@ -737,19 +737,26 @@ type
     messages : array of string;
     messageNum, messageCount:integer; //Текущий номер сообщения и текущий символ сообщения
     messageTimer:Timer;
+    dialogRect:PictureWPF;
     isDialogue: boolean; //Идёт ли диалог
     procedure EndDialogue();
     begin
       LAGD.Player.SetUsing := False;
-      LAGD.DialogRect.Visible := false;
+      dialogRect.Visible := false;
       messageTimer.Stop();
       isDialogue := False;
     end;
     public
     constructor Create();
     begin
+      if (dialogRect = nil) then Redraw(procedure() -> begin
+        dialogRect := new PictureWPF(0,768-128,'img\ui\rect_game_big.png');
+        dialogRect := ApplyFontSettings(dialogRect) as PictureWPF;
+        dialogRect.FontSize := 24;
+        dialogRect.Visible := false;
+      end);
       messageTimer := new Timer(16, procedure() -> begin
-        LAGD.DialogRect.Text += messages[messageNum][messageCount];
+        dialogRect.Text += messages[messageNum][messageCount];
         if (messageCount = messages[messageNum].Length) then
           messageTimer.Stop();
         messageCount += 1;
@@ -758,10 +765,10 @@ type
 
     procedure StartDialog(messages:array of string);
     begin
-      LAGD.DialogRect.ToFront();
+      dialogRect.ToFront();
       messageNum := -1; messageCount := 1;
       self.messages := messages; //Сохраняем сообщения
-      LAGD.DialogRect.Visible := True;
+      dialogRect.Visible := True;
       LAGD.Player.SetUsing := True;
       isDialogue := True;
       NextMessage();
@@ -773,7 +780,7 @@ type
       Result:=True; //Диалог может продолжаться
       if (messageTimer.Enabled) then
       begin
-        messageTimer.Stop(); LAGD.DialogRect.Text := messages[messageNum]; exit;
+        messageTimer.Stop(); dialogRect.Text := messages[messageNum]; exit;
       end;
       messageNum += 1;
 
@@ -782,7 +789,7 @@ type
         EndDialogue(); exit;
       end;
       //Начинаем с первого символа сообщения и пустого текста в окне сообщений
-      messageCount := 1; LAGD.DialogRect.Text := '';
+      messageCount := 1; dialogRect.Text := '';
       messageTimer.Start();
     end;
   end;
@@ -1371,13 +1378,6 @@ type
     LAGD.BgPic := new PictureWPF(0,0, 'img\MainMenuField1.png');   
     if (LAGD.TransPic = nil) then LAGD.TransPic := new TransitionPic();
     if (LAGD.DialogHandler = nil) then LAGD.DialogHandler := new DialogHandler();
-    if (LAGD.DialogRect = nil) then Redraw(procedure() -> begin
-        LAGD.DialogRect := new PictureWPF(0,768-128,'img\ui\rect_game_big.png');
-        LAGD.DialogRect.FontSize := 24;
-        LAGD.DialogRect.FontColor := Colors.Yellow;
-        LAGD.DialogRect.FontName := 'GranaPadano';
-        LAGD.DialogRect.Visible := false;
-      end);
     DrawMainMenu();
   end;
 end.
