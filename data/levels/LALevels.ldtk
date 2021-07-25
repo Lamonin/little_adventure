@@ -9,7 +9,7 @@
 		"url": "https://ldtk.io"
 	},
 	"jsonVersion": "0.9.3",
-	"nextUid": 36,
+	"nextUid": 40,
 	"worldLayout": "Free",
 	"worldGridWidth": 256,
 	"worldGridHeight": 256,
@@ -46,6 +46,25 @@
 			"autoRuleGroups": [],
 			"autoSourceLayerDefUid": null,
 			"tilesetDefUid": null,
+			"tilePivotX": 0,
+			"tilePivotY": 0
+		},
+		{
+			"__type": "Tiles",
+			"identifier": "Tiles3",
+			"type": "Tiles",
+			"uid": 36,
+			"gridSize": 48,
+			"displayOpacity": 1,
+			"pxOffsetX": 0,
+			"pxOffsetY": 0,
+			"requiredTags": [],
+			"excludedTags": [],
+			"intGridValues": [{ "value": 1, "identifier": null, "color": "#000000" }],
+			"autoTilesetDefUid": null,
+			"autoRuleGroups": [],
+			"autoSourceLayerDefUid": null,
+			"tilesetDefUid": 2,
 			"tilePivotX": 0,
 			"tilePivotY": 0
 		},
@@ -253,6 +272,52 @@
 					"identifier": "Amount",
 					"__type": "Int",
 					"uid": 26,
+					"type": "F_Int",
+					"isArray": false,
+					"canBeNull": false,
+					"arrayMinLength": null,
+					"arrayMaxLength": null,
+					"editorDisplayMode": "Hidden",
+					"editorDisplayPos": "Above",
+					"editorAlwaysShow": false,
+					"editorCutLongValues": true,
+					"min": 0,
+					"max": null,
+					"regex": null,
+					"acceptFileTypes": null,
+					"defaultOverride": null,
+					"textLanguageMode": null
+				}
+			]
+		},
+		{
+			"identifier": "Armor2",
+			"uid": 38,
+			"tags": [],
+			"width": 48,
+			"height": 48,
+			"resizableX": false,
+			"resizableY": false,
+			"keepAspectRatio": false,
+			"fillOpacity": 1,
+			"lineOpacity": 1,
+			"hollow": false,
+			"color": "#EEB521",
+			"renderMode": "Tile",
+			"showName": true,
+			"tilesetId": 2,
+			"tileId": 13,
+			"tileRenderMode": "FitInside",
+			"maxCount": 0,
+			"limitScope": "PerLevel",
+			"limitBehavior": "MoveLastOne",
+			"pivotX": 0,
+			"pivotY": 0,
+			"fieldDefs": [
+				{
+					"identifier": "Amount",
+					"__type": "Int",
+					"uid": 39,
 					"type": "F_Int",
 					"isArray": false,
 					"canBeNull": false,
@@ -1129,7 +1194,7 @@
 							"fieldInstances": [
 								{
 									"__identifier": "Messages",
-									"__value": [ "На табличке написано:", "Внизу безопасно.", "Я не вру." ],
+									"__value": [ "На табличке написано:", "Внизу безопасно.", "Честно." ],
 									"__type": "Array<String>",
 									"defUid": 10,
 									"realEditorValues": [ {
@@ -1140,7 +1205,7 @@
 										"params": ["Внизу безопасно."]
 									}, {
 										"id": "V_String",
-										"params": ["Я не вру."]
+										"params": ["Честно."]
 									} ]
 								},
 								{ "__identifier": "CanGet", "__value": false, "__type": "Bool", "defUid": 11, "realEditorValues": [] }
@@ -1199,32 +1264,6 @@
 								},
 								{ "__identifier": "CanGet", "__value": false, "__type": "Bool", "defUid": 11, "realEditorValues": [] }
 							]
-						},
-						{
-							"__identifier": "EnemyPoint",
-							"__grid": [8,3],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 18,
-							"px": [384,144],
-							"fieldInstances": [{
-								"__identifier": "Enemys",
-								"__value": [ "Skeleton", "Golem", "TreeEnemy" ],
-								"__type": "Array<LocalEnum.EnemyType>",
-								"defUid": 21,
-								"realEditorValues": [ {
-									"id": "V_String",
-									"params": ["Skeleton"]
-								}, {
-									"id": "V_String",
-									"params": ["Golem"]
-								}, {
-									"id": "V_String",
-									"params": ["TreeEnemy"]
-								} ]
-							}]
 						},
 						{
 							"__identifier": "NextLevel",
@@ -1498,37 +1537,37 @@
 							}]
 						},
 						{
-							"__identifier": "Potion",
-							"__grid": [6,1],
+							"__identifier": "Wall",
+							"__grid": [18,2],
 							"__pivot": [0,0],
-							"__tile": { "tilesetUid": 2, "srcRect": [192,96,48,48] },
+							"__tile": null,
 							"width": 48,
 							"height": 48,
-							"defUid": 33,
-							"px": [288,48],
-							"fieldInstances": [{
-								"__identifier": "Amount",
-								"__value": 20,
-								"__type": "Int",
-								"defUid": 34,
-								"realEditorValues": [{ "id": "V_Int", "params": [20] }]
-							}]
+							"defUid": 3,
+							"px": [864,96],
+							"fieldInstances": []
 						},
 						{
-							"__identifier": "Armor",
-							"__grid": [6,2],
+							"__identifier": "EnemyPoint",
+							"__grid": [13,7],
 							"__pivot": [0,0],
-							"__tile": { "tilesetUid": 2, "srcRect": [672,0,48,48] },
+							"__tile": null,
 							"width": 48,
 							"height": 48,
-							"defUid": 17,
-							"px": [288,96],
+							"defUid": 18,
+							"px": [624,336],
 							"fieldInstances": [{
-								"__identifier": "Amount",
-								"__value": 5,
-								"__type": "Int",
-								"defUid": 26,
-								"realEditorValues": [{ "id": "V_Int", "params": [5] }]
+								"__identifier": "Enemys",
+								"__value": [ "TreeEnemy", "TreeEnemy" ],
+								"__type": "Array<LocalEnum.EnemyType>",
+								"defUid": 21,
+								"realEditorValues": [ {
+									"id": "V_String",
+									"params": ["TreeEnemy"]
+								}, {
+									"id": "V_String",
+									"params": ["TreeEnemy"]
+								} ]
 							}]
 						},
 						{
@@ -1543,48 +1582,94 @@
 							"fieldInstances": []
 						},
 						{
-							"__identifier": "Wall",
-							"__grid": [18,2],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 3,
-							"px": [864,96],
-							"fieldInstances": []
-						},
-						{
 							"__identifier": "EnemyPoint",
-							"__grid": [9,3],
+							"__grid": [22,5],
 							"__pivot": [0,0],
 							"__tile": null,
 							"width": 48,
 							"height": 48,
 							"defUid": 18,
-							"px": [432,144],
+							"px": [1056,240],
 							"fieldInstances": [{
 								"__identifier": "Enemys",
-								"__value": ["Skeleton"],
+								"__value": ["TreeEnemy"],
 								"__type": "Array<LocalEnum.EnemyType>",
 								"defUid": 21,
 								"realEditorValues": [{
 									"id": "V_String",
-									"params": ["Skeleton"]
+									"params": ["TreeEnemy"]
 								}]
 							}]
 						},
 						{
-							"__identifier": "Wall",
-							"__grid": [1,7],
+							"__identifier": "EnemyPoint",
+							"__grid": [17,1],
 							"__pivot": [0,0],
 							"__tile": null,
 							"width": 48,
 							"height": 48,
-							"defUid": 3,
-							"px": [48,336],
-							"fieldInstances": []
+							"defUid": 18,
+							"px": [816,48],
+							"fieldInstances": [{
+								"__identifier": "Enemys",
+								"__value": [ "TreeEnemy", "TreeEnemy", "TreeEnemy" ],
+								"__type": "Array<LocalEnum.EnemyType>",
+								"defUid": 21,
+								"realEditorValues": [ {
+									"id": "V_String",
+									"params": ["TreeEnemy"]
+								}, {
+									"id": "V_String",
+									"params": ["TreeEnemy"]
+								}, {
+									"id": "V_String",
+									"params": ["TreeEnemy"]
+								} ]
+							}]
+						},
+						{
+							"__identifier": "Armor",
+							"__grid": [9,4],
+							"__pivot": [0,0],
+							"__tile": { "tilesetUid": 2, "srcRect": [672,0,48,48] },
+							"width": 48,
+							"height": 48,
+							"defUid": 17,
+							"px": [432,192],
+							"fieldInstances": [{
+								"__identifier": "Amount",
+								"__value": 5,
+								"__type": "Int",
+								"defUid": 26,
+								"realEditorValues": [{ "id": "V_Int", "params": [5] }]
+							}]
 						}
 					]
+				},
+				{
+					"__identifier": "Tiles3",
+					"__type": "Tiles",
+					"__cWid": 27,
+					"__cHei": 16,
+					"__gridSize": 48,
+					"__opacity": 1,
+					"__pxTotalOffsetX": 0,
+					"__pxTotalOffsetY": 0,
+					"__tilesetDefUid": 2,
+					"__tilesetRelPath": "items_tile3.png",
+					"levelId": 0,
+					"layerDefUid": 36,
+					"pxOffsetX": 0,
+					"pxOffsetY": 0,
+					"visible": true,
+					"optionalRules": [],
+					"intGrid": [],
+					"intGridCsv": [],
+					"autoLayerTiles": [],
+					"seed": 8838199,
+					"overrideTilesetUid": null,
+					"gridTiles": [],
+					"entityInstances": []
 				},
 				{
 					"__identifier": "Tiles2",
@@ -2170,29 +2255,6 @@
 					"gridTiles": [],
 					"entityInstances": [
 						{
-							"__identifier": "EnemyPoint",
-							"__grid": [18,2],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 18,
-							"px": [864,96],
-							"fieldInstances": [{
-								"__identifier": "Enemys",
-								"__value": [ "Skeleton", "Skeleton" ],
-								"__type": "Array<LocalEnum.EnemyType>",
-								"defUid": 21,
-								"realEditorValues": [ {
-									"id": "V_String",
-									"params": ["Skeleton"]
-								}, {
-									"id": "V_String",
-									"params": ["Skeleton"]
-								} ]
-							}]
-						},
-						{
 							"__identifier": "Wall",
 							"__grid": [0,0],
 							"__pivot": [0,0],
@@ -2490,43 +2552,20 @@
 							"fieldInstances": []
 						},
 						{
-							"__identifier": "EnemyPoint",
-							"__grid": [19,6],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 18,
-							"px": [912,288],
-							"fieldInstances": [{
-								"__identifier": "Enemys",
-								"__value": [ "Skeleton", "Skeleton" ],
-								"__type": "Array<LocalEnum.EnemyType>",
-								"defUid": 21,
-								"realEditorValues": [ {
-									"id": "V_String",
-									"params": ["Skeleton"]
-								}, {
-									"id": "V_String",
-									"params": ["Skeleton"]
-								} ]
-							}]
-						},
-						{
 							"__identifier": "Armor",
-							"__grid": [21,3],
+							"__grid": [5,6],
 							"__pivot": [0,0],
 							"__tile": { "tilesetUid": 2, "srcRect": [672,0,48,48] },
 							"width": 48,
 							"height": 48,
 							"defUid": 17,
-							"px": [1008,144],
+							"px": [240,288],
 							"fieldInstances": [{
 								"__identifier": "Amount",
-								"__value": 15,
+								"__value": 4,
 								"__type": "Int",
 								"defUid": 26,
-								"realEditorValues": [{ "id": "V_Int", "params": [15] }]
+								"realEditorValues": [{ "id": "V_Int", "params": [4] }]
 							}]
 						},
 						{
@@ -3136,55 +3175,6 @@
 							]
 						},
 						{
-							"__identifier": "EnemyPoint",
-							"__grid": [15,9],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 18,
-							"px": [720,432],
-							"fieldInstances": [{
-								"__identifier": "Enemys",
-								"__value": ["Skeleton"],
-								"__type": "Array<LocalEnum.EnemyType>",
-								"defUid": 21,
-								"realEditorValues": [{
-									"id": "V_String",
-									"params": ["Skeleton"]
-								}]
-							}]
-						},
-						{
-							"__identifier": "EnemyPoint",
-							"__grid": [2,2],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 18,
-							"px": [96,96],
-							"fieldInstances": [{
-								"__identifier": "Enemys",
-								"__value": [ "Skeleton", "TreeEnemy", "TreeEnemy", "Skeleton" ],
-								"__type": "Array<LocalEnum.EnemyType>",
-								"defUid": 21,
-								"realEditorValues": [ {
-									"id": "V_String",
-									"params": ["Skeleton"]
-								}, {
-									"id": "V_String",
-									"params": ["TreeEnemy"]
-								}, {
-									"id": "V_String",
-									"params": ["TreeEnemy"]
-								}, {
-									"id": "V_String",
-									"params": ["Skeleton"]
-								} ]
-							}]
-						},
-						{
 							"__identifier": "SpawnPoint",
 							"__grid": [0,2],
 							"__pivot": [0,0],
@@ -3194,26 +3184,6 @@
 							"defUid": 23,
 							"px": [0,96],
 							"fieldInstances": []
-						},
-						{
-							"__identifier": "EnemyPoint",
-							"__grid": [0,3],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 18,
-							"px": [0,144],
-							"fieldInstances": [{
-								"__identifier": "Enemys",
-								"__value": ["Skeleton"],
-								"__type": "Array<LocalEnum.EnemyType>",
-								"defUid": 21,
-								"realEditorValues": [{
-									"id": "V_String",
-									"params": ["Skeleton"]
-								}]
-							}]
 						},
 						{
 							"__identifier": "Wall",
@@ -3260,28 +3230,201 @@
 							"fieldInstances": []
 						},
 						{
-							"__identifier": "Wall",
+							"__identifier": "MessageObject",
 							"__grid": [12,8],
 							"__pivot": [0,0],
 							"__tile": null,
 							"width": 48,
 							"height": 48,
-							"defUid": 3,
+							"defUid": 8,
 							"px": [576,384],
-							"fieldInstances": []
+							"fieldInstances": [
+								{
+									"__identifier": "Messages",
+									"__value": [ "Статуя выглядит так, будто черед нее можно пройти...", "Показалось." ],
+									"__type": "Array<String>",
+									"defUid": 10,
+									"realEditorValues": [ {
+										"id": "V_String",
+										"params": ["Статуя выглядит так, будто черед нее можно пройти..."]
+									}, {
+										"id": "V_String",
+										"params": ["Показалось."]
+									} ]
+								},
+								{ "__identifier": "CanGet", "__value": false, "__type": "Bool", "defUid": 11, "realEditorValues": [] }
+							]
 						},
 						{
-							"__identifier": "Wall",
+							"__identifier": "MessageObject",
 							"__grid": [13,8],
 							"__pivot": [0,0],
 							"__tile": null,
 							"width": 48,
 							"height": 48,
-							"defUid": 3,
+							"defUid": 8,
 							"px": [624,384],
-							"fieldInstances": []
+							"fieldInstances": [
+								{
+									"__identifier": "Messages",
+									"__value": [ "Статуя выглядит так, будто черед нее можно пройти...", "Показалось." ],
+									"__type": "Array<String>",
+									"defUid": 10,
+									"realEditorValues": [ {
+										"id": "V_String",
+										"params": ["Статуя выглядит так, будто черед нее можно пройти..."]
+									}, {
+										"id": "V_String",
+										"params": ["Показалось."]
+									} ]
+								},
+								{ "__identifier": "CanGet", "__value": false, "__type": "Bool", "defUid": 11, "realEditorValues": [] }
+							]
+						},
+						{
+							"__identifier": "EnemyPoint",
+							"__grid": [14,1],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 18,
+							"px": [672,48],
+							"fieldInstances": [{
+								"__identifier": "Enemys",
+								"__value": [ "TreeEnemy", "TreeEnemy", "Skeleton", "TreeEnemy" ],
+								"__type": "Array<LocalEnum.EnemyType>",
+								"defUid": 21,
+								"realEditorValues": [ {
+									"id": "V_String",
+									"params": ["TreeEnemy"]
+								}, {
+									"id": "V_String",
+									"params": ["TreeEnemy"]
+								}, {
+									"id": "V_String",
+									"params": ["Skeleton"]
+								}, {
+									"id": "V_String",
+									"params": ["TreeEnemy"]
+								} ]
+							}]
+						},
+						{
+							"__identifier": "EnemyPoint",
+							"__grid": [11,13],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 18,
+							"px": [528,624],
+							"fieldInstances": [{
+								"__identifier": "Enemys",
+								"__value": [ "Golem", "Skeleton", "Skeleton" ],
+								"__type": "Array<LocalEnum.EnemyType>",
+								"defUid": 21,
+								"realEditorValues": [ {
+									"id": "V_String",
+									"params": ["Golem"]
+								}, {
+									"id": "V_String",
+									"params": ["Skeleton"]
+								}, {
+									"id": "V_String",
+									"params": ["Skeleton"]
+								} ]
+							}]
+						},
+						{
+							"__identifier": "EnemyPoint",
+							"__grid": [22,8],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 18,
+							"px": [1056,384],
+							"fieldInstances": [{
+								"__identifier": "Enemys",
+								"__value": [ "Skeleton", "TreeEnemy" ],
+								"__type": "Array<LocalEnum.EnemyType>",
+								"defUid": 21,
+								"realEditorValues": [ {
+									"id": "V_String",
+									"params": ["Skeleton"]
+								}, {
+									"id": "V_String",
+									"params": ["TreeEnemy"]
+								} ]
+							}]
+						},
+						{
+							"__identifier": "EnemyPoint",
+							"__grid": [7,8],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 18,
+							"px": [336,384],
+							"fieldInstances": [{
+								"__identifier": "Enemys",
+								"__value": [ "TreeEnemy", "Skeleton" ],
+								"__type": "Array<LocalEnum.EnemyType>",
+								"defUid": 21,
+								"realEditorValues": [ {
+									"id": "V_String",
+									"params": ["TreeEnemy"]
+								}, {
+									"id": "V_String",
+									"params": ["Skeleton"]
+								} ]
+							}]
+						},
+						{
+							"__identifier": "Potion",
+							"__grid": [11,8],
+							"__pivot": [0,0],
+							"__tile": { "tilesetUid": 2, "srcRect": [192,96,48,48] },
+							"width": 48,
+							"height": 48,
+							"defUid": 33,
+							"px": [528,384],
+							"fieldInstances": [{
+								"__identifier": "Amount",
+								"__value": 1,
+								"__type": "Int",
+								"defUid": 34,
+								"realEditorValues": [{ "id": "V_Int", "params": [1] }]
+							}]
 						}
 					]
+				},
+				{
+					"__identifier": "Tiles3",
+					"__type": "Tiles",
+					"__cWid": 27,
+					"__cHei": 16,
+					"__gridSize": 48,
+					"__opacity": 1,
+					"__pxTotalOffsetX": 0,
+					"__pxTotalOffsetY": 0,
+					"__tilesetDefUid": 2,
+					"__tilesetRelPath": "items_tile3.png",
+					"levelId": 22,
+					"layerDefUid": 36,
+					"pxOffsetX": 0,
+					"pxOffsetY": 0,
+					"visible": true,
+					"optionalRules": [],
+					"intGrid": [],
+					"intGridCsv": [],
+					"autoLayerTiles": [],
+					"seed": 2413934,
+					"overrideTilesetUid": null,
+					"gridTiles": [],
+					"entityInstances": []
 				},
 				{
 					"__identifier": "Tiles2",
@@ -3847,7 +3990,7 @@
 					"layerDefUid": 4,
 					"pxOffsetX": 0,
 					"pxOffsetY": 0,
-					"visible": false,
+					"visible": true,
 					"optionalRules": [],
 					"intGrid": [],
 					"intGridCsv": [],
@@ -3866,287 +4009,6 @@
 							"defUid": 23,
 							"px": [0,48],
 							"fieldInstances": []
-						},
-						{
-							"__identifier": "EnemyPoint",
-							"__grid": [2,4],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 18,
-							"px": [96,192],
-							"fieldInstances": [{
-								"__identifier": "Enemys",
-								"__value": [ "Golem", "Golem", "Golem" ],
-								"__type": "Array<LocalEnum.EnemyType>",
-								"defUid": 21,
-								"realEditorValues": [ {
-									"id": "V_String",
-									"params": ["Golem"]
-								}, {
-									"id": "V_String",
-									"params": ["Golem"]
-								}, {
-									"id": "V_String",
-									"params": ["Golem"]
-								} ]
-							}]
-						},
-						{
-							"__identifier": "EnemyPoint",
-							"__grid": [4,13],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 18,
-							"px": [192,624],
-							"fieldInstances": [{
-								"__identifier": "Enemys",
-								"__value": ["TreeEnemy"],
-								"__type": "Array<LocalEnum.EnemyType>",
-								"defUid": 21,
-								"realEditorValues": [{
-									"id": "V_String",
-									"params": ["TreeEnemy"]
-								}]
-							}]
-						},
-						{
-							"__identifier": "EnemyPoint",
-							"__grid": [20,14],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 18,
-							"px": [960,672],
-							"fieldInstances": [{
-								"__identifier": "Enemys",
-								"__value": ["Skeleton"],
-								"__type": "Array<LocalEnum.EnemyType>",
-								"defUid": 21,
-								"realEditorValues": [{
-									"id": "V_String",
-									"params": ["Skeleton"]
-								}]
-							}]
-						},
-						{
-							"__identifier": "EnemyPoint",
-							"__grid": [11,14],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 18,
-							"px": [528,672],
-							"fieldInstances": [{
-								"__identifier": "Enemys",
-								"__value": [ "TreeEnemy", "Skeleton" ],
-								"__type": "Array<LocalEnum.EnemyType>",
-								"defUid": 21,
-								"realEditorValues": [ {
-									"id": "V_String",
-									"params": ["TreeEnemy"]
-								}, {
-									"id": "V_String",
-									"params": ["Skeleton"]
-								} ]
-							}]
-						},
-						{
-							"__identifier": "EnemyPoint",
-							"__grid": [2,5],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 18,
-							"px": [96,240],
-							"fieldInstances": [{
-								"__identifier": "Enemys",
-								"__value": [ "Golem", "Golem", "Golem" ],
-								"__type": "Array<LocalEnum.EnemyType>",
-								"defUid": 21,
-								"realEditorValues": [ {
-									"id": "V_String",
-									"params": ["Golem"]
-								}, {
-									"id": "V_String",
-									"params": ["Golem"]
-								}, {
-									"id": "V_String",
-									"params": ["Golem"]
-								} ]
-							}]
-						},
-						{
-							"__identifier": "EnemyPoint",
-							"__grid": [2,6],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 18,
-							"px": [96,288],
-							"fieldInstances": [{
-								"__identifier": "Enemys",
-								"__value": [ "Golem", "Golem", "Golem" ],
-								"__type": "Array<LocalEnum.EnemyType>",
-								"defUid": 21,
-								"realEditorValues": [ {
-									"id": "V_String",
-									"params": ["Golem"]
-								}, {
-									"id": "V_String",
-									"params": ["Golem"]
-								}, {
-									"id": "V_String",
-									"params": ["Golem"]
-								} ]
-							}]
-						},
-						{
-							"__identifier": "EnemyPoint",
-							"__grid": [5,11],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 18,
-							"px": [240,528],
-							"fieldInstances": [{
-								"__identifier": "Enemys",
-								"__value": ["Skeleton"],
-								"__type": "Array<LocalEnum.EnemyType>",
-								"defUid": 21,
-								"realEditorValues": [{
-									"id": "V_String",
-									"params": ["Skeleton"]
-								}]
-							}]
-						},
-						{
-							"__identifier": "EnemyPoint",
-							"__grid": [12,12],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 18,
-							"px": [576,576],
-							"fieldInstances": [{
-								"__identifier": "Enemys",
-								"__value": ["TreeEnemy"],
-								"__type": "Array<LocalEnum.EnemyType>",
-								"defUid": 21,
-								"realEditorValues": [{
-									"id": "V_String",
-									"params": ["TreeEnemy"]
-								}]
-							}]
-						},
-						{
-							"__identifier": "EnemyPoint",
-							"__grid": [25,12],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 18,
-							"px": [1200,576],
-							"fieldInstances": [{
-								"__identifier": "Enemys",
-								"__value": ["Skeleton"],
-								"__type": "Array<LocalEnum.EnemyType>",
-								"defUid": 21,
-								"realEditorValues": [{
-									"id": "V_String",
-									"params": ["Skeleton"]
-								}]
-							}]
-						},
-						{
-							"__identifier": "EnemyPoint",
-							"__grid": [20,10],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 18,
-							"px": [960,480],
-							"fieldInstances": [{
-								"__identifier": "Enemys",
-								"__value": ["TreeEnemy"],
-								"__type": "Array<LocalEnum.EnemyType>",
-								"defUid": 21,
-								"realEditorValues": [{
-									"id": "V_String",
-									"params": ["TreeEnemy"]
-								}]
-							}]
-						},
-						{
-							"__identifier": "EnemyPoint",
-							"__grid": [15,4],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 18,
-							"px": [720,192],
-							"fieldInstances": [{
-								"__identifier": "Enemys",
-								"__value": ["TreeEnemy"],
-								"__type": "Array<LocalEnum.EnemyType>",
-								"defUid": 21,
-								"realEditorValues": [{
-									"id": "V_String",
-									"params": ["TreeEnemy"]
-								}]
-							}]
-						},
-						{
-							"__identifier": "EnemyPoint",
-							"__grid": [6,2],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 18,
-							"px": [288,96],
-							"fieldInstances": [{
-								"__identifier": "Enemys",
-								"__value": ["Skeleton"],
-								"__type": "Array<LocalEnum.EnemyType>",
-								"defUid": 21,
-								"realEditorValues": [{
-									"id": "V_String",
-									"params": ["Skeleton"]
-								}]
-							}]
-						},
-						{
-							"__identifier": "EnemyPoint",
-							"__grid": [7,6],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 18,
-							"px": [336,288],
-							"fieldInstances": [{
-								"__identifier": "Enemys",
-								"__value": ["TreeEnemy"],
-								"__type": "Array<LocalEnum.EnemyType>",
-								"defUid": 21,
-								"realEditorValues": [{
-									"id": "V_String",
-									"params": ["TreeEnemy"]
-								}]
-							}]
 						},
 						{
 							"__identifier": "Wall",
@@ -6365,8 +6227,492 @@
 							"defUid": 3,
 							"px": [48,0],
 							"fieldInstances": []
+						},
+						{
+							"__identifier": "EnemyPoint",
+							"__grid": [5,11],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 18,
+							"px": [240,528],
+							"fieldInstances": [{
+								"__identifier": "Enemys",
+								"__value": [ "Skeleton", "TreeEnemy" ],
+								"__type": "Array<LocalEnum.EnemyType>",
+								"defUid": 21,
+								"realEditorValues": [ {
+									"id": "V_String",
+									"params": ["Skeleton"]
+								}, {
+									"id": "V_String",
+									"params": ["TreeEnemy"]
+								} ]
+							}]
+						},
+						{
+							"__identifier": "EnemyPoint",
+							"__grid": [10,12],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 18,
+							"px": [480,576],
+							"fieldInstances": [{
+								"__identifier": "Enemys",
+								"__value": [ "TreeEnemy", "Skeleton" ],
+								"__type": "Array<LocalEnum.EnemyType>",
+								"defUid": 21,
+								"realEditorValues": [ {
+									"id": "V_String",
+									"params": ["TreeEnemy"]
+								}, {
+									"id": "V_String",
+									"params": ["Skeleton"]
+								} ]
+							}]
+						},
+						{
+							"__identifier": "EnemyPoint",
+							"__grid": [14,12],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 18,
+							"px": [672,576],
+							"fieldInstances": [{
+								"__identifier": "Enemys",
+								"__value": [ "TreeEnemy", "Skeleton" ],
+								"__type": "Array<LocalEnum.EnemyType>",
+								"defUid": 21,
+								"realEditorValues": [ {
+									"id": "V_String",
+									"params": ["TreeEnemy"]
+								}, {
+									"id": "V_String",
+									"params": ["Skeleton"]
+								} ]
+							}]
+						},
+						{
+							"__identifier": "EnemyPoint",
+							"__grid": [23,14],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 18,
+							"px": [1104,672],
+							"fieldInstances": [{
+								"__identifier": "Enemys",
+								"__value": [ "TreeEnemy", "Skeleton" ],
+								"__type": "Array<LocalEnum.EnemyType>",
+								"defUid": 21,
+								"realEditorValues": [ {
+									"id": "V_String",
+									"params": ["TreeEnemy"]
+								}, {
+									"id": "V_String",
+									"params": ["Skeleton"]
+								} ]
+							}]
+						},
+						{
+							"__identifier": "EnemyPoint",
+							"__grid": [15,14],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 18,
+							"px": [720,672],
+							"fieldInstances": [{
+								"__identifier": "Enemys",
+								"__value": [ "TreeEnemy", "Skeleton" ],
+								"__type": "Array<LocalEnum.EnemyType>",
+								"defUid": 21,
+								"realEditorValues": [ {
+									"id": "V_String",
+									"params": ["TreeEnemy"]
+								}, {
+									"id": "V_String",
+									"params": ["Skeleton"]
+								} ]
+							}]
+						},
+						{
+							"__identifier": "EnemyPoint",
+							"__grid": [4,13],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 18,
+							"px": [192,624],
+							"fieldInstances": [{
+								"__identifier": "Enemys",
+								"__value": [ "TreeEnemy", "Skeleton" ],
+								"__type": "Array<LocalEnum.EnemyType>",
+								"defUid": 21,
+								"realEditorValues": [ {
+									"id": "V_String",
+									"params": ["TreeEnemy"]
+								}, {
+									"id": "V_String",
+									"params": ["Skeleton"]
+								} ]
+							}]
+						},
+						{
+							"__identifier": "EnemyPoint",
+							"__grid": [9,14],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 18,
+							"px": [432,672],
+							"fieldInstances": [{
+								"__identifier": "Enemys",
+								"__value": [ "TreeEnemy", "Skeleton" ],
+								"__type": "Array<LocalEnum.EnemyType>",
+								"defUid": 21,
+								"realEditorValues": [ {
+									"id": "V_String",
+									"params": ["TreeEnemy"]
+								}, {
+									"id": "V_String",
+									"params": ["Skeleton"]
+								} ]
+							}]
+						},
+						{
+							"__identifier": "EnemyPoint",
+							"__grid": [24,4],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 18,
+							"px": [1152,192],
+							"fieldInstances": [{
+								"__identifier": "Enemys",
+								"__value": [ "TreeEnemy", "Skeleton" ],
+								"__type": "Array<LocalEnum.EnemyType>",
+								"defUid": 21,
+								"realEditorValues": [ {
+									"id": "V_String",
+									"params": ["TreeEnemy"]
+								}, {
+									"id": "V_String",
+									"params": ["Skeleton"]
+								} ]
+							}]
+						},
+						{
+							"__identifier": "EnemyPoint",
+							"__grid": [25,4],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 18,
+							"px": [1200,192],
+							"fieldInstances": [{
+								"__identifier": "Enemys",
+								"__value": [ "TreeEnemy", "Skeleton" ],
+								"__type": "Array<LocalEnum.EnemyType>",
+								"defUid": 21,
+								"realEditorValues": [ {
+									"id": "V_String",
+									"params": ["TreeEnemy"]
+								}, {
+									"id": "V_String",
+									"params": ["Skeleton"]
+								} ]
+							}]
+						},
+						{
+							"__identifier": "EnemyPoint",
+							"__grid": [24,5],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 18,
+							"px": [1152,240],
+							"fieldInstances": [{
+								"__identifier": "Enemys",
+								"__value": [ "TreeEnemy", "Skeleton" ],
+								"__type": "Array<LocalEnum.EnemyType>",
+								"defUid": 21,
+								"realEditorValues": [ {
+									"id": "V_String",
+									"params": ["TreeEnemy"]
+								}, {
+									"id": "V_String",
+									"params": ["Skeleton"]
+								} ]
+							}]
+						},
+						{
+							"__identifier": "EnemyPoint",
+							"__grid": [22,10],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 18,
+							"px": [1056,480],
+							"fieldInstances": [{
+								"__identifier": "Enemys",
+								"__value": [ "TreeEnemy", "Skeleton" ],
+								"__type": "Array<LocalEnum.EnemyType>",
+								"defUid": 21,
+								"realEditorValues": [ {
+									"id": "V_String",
+									"params": ["TreeEnemy"]
+								}, {
+									"id": "V_String",
+									"params": ["Skeleton"]
+								} ]
+							}]
+						},
+						{
+							"__identifier": "EnemyPoint",
+							"__grid": [10,10],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 18,
+							"px": [480,480],
+							"fieldInstances": [{
+								"__identifier": "Enemys",
+								"__value": [ "Golem", "Golem" ],
+								"__type": "Array<LocalEnum.EnemyType>",
+								"defUid": 21,
+								"realEditorValues": [ {
+									"id": "V_String",
+									"params": ["Golem"]
+								}, {
+									"id": "V_String",
+									"params": ["Golem"]
+								} ]
+							}]
+						},
+						{
+							"__identifier": "EnemyPoint",
+							"__grid": [13,10],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 18,
+							"px": [624,480],
+							"fieldInstances": [{
+								"__identifier": "Enemys",
+								"__value": ["TreeEnemy"],
+								"__type": "Array<LocalEnum.EnemyType>",
+								"defUid": 21,
+								"realEditorValues": [{
+									"id": "V_String",
+									"params": ["TreeEnemy"]
+								}]
+							}]
+						},
+						{
+							"__identifier": "Potion",
+							"__grid": [24,1],
+							"__pivot": [0,0],
+							"__tile": { "tilesetUid": 2, "srcRect": [192,96,48,48] },
+							"width": 48,
+							"height": 48,
+							"defUid": 33,
+							"px": [1152,48],
+							"fieldInstances": [{
+								"__identifier": "Amount",
+								"__value": 1,
+								"__type": "Int",
+								"defUid": 34,
+								"realEditorValues": [{ "id": "V_Int", "params": [1] }]
+							}]
+						},
+						{
+							"__identifier": "Armor2",
+							"__grid": [2,4],
+							"__pivot": [0,0],
+							"__tile": { "tilesetUid": 2, "srcRect": [624,0,48,48] },
+							"width": 48,
+							"height": 48,
+							"defUid": 38,
+							"px": [96,192],
+							"fieldInstances": [{
+								"__identifier": "Amount",
+								"__value": 7,
+								"__type": "Int",
+								"defUid": 39,
+								"realEditorValues": [{ "id": "V_Int", "params": [7] }]
+							}]
+						},
+						{
+							"__identifier": "EnemyPoint",
+							"__grid": [2,10],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 18,
+							"px": [96,480],
+							"fieldInstances": [{
+								"__identifier": "Enemys",
+								"__value": ["TreeEnemy"],
+								"__type": "Array<LocalEnum.EnemyType>",
+								"defUid": 21,
+								"realEditorValues": [{
+									"id": "V_String",
+									"params": ["TreeEnemy"]
+								}]
+							}]
+						},
+						{
+							"__identifier": "EnemyPoint",
+							"__grid": [2,7],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 18,
+							"px": [96,336],
+							"fieldInstances": [{
+								"__identifier": "Enemys",
+								"__value": ["Skeleton"],
+								"__type": "Array<LocalEnum.EnemyType>",
+								"defUid": 21,
+								"realEditorValues": [{
+									"id": "V_String",
+									"params": ["Skeleton"]
+								}]
+							}]
+						},
+						{
+							"__identifier": "MessageObject",
+							"__grid": [2,3],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 8,
+							"px": [96,144],
+							"fieldInstances": [
+								{
+									"__identifier": "Messages",
+									"__value": ["Нужен ключ"],
+									"__type": "Array<String>",
+									"defUid": 10,
+									"realEditorValues": [{
+										"id": "V_String",
+										"params": ["Нужен ключ"]
+									}]
+								},
+								{ "__identifier": "CanGet", "__value": false, "__type": "Bool", "defUid": 11, "realEditorValues": [] }
+							]
+						},
+						{
+							"__identifier": "EnemyPoint",
+							"__grid": [18,4],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 18,
+							"px": [864,192],
+							"fieldInstances": [{
+								"__identifier": "Enemys",
+								"__value": [ "TreeEnemy", "Skeleton" ],
+								"__type": "Array<LocalEnum.EnemyType>",
+								"defUid": 21,
+								"realEditorValues": [ {
+									"id": "V_String",
+									"params": ["TreeEnemy"]
+								}, {
+									"id": "V_String",
+									"params": ["Skeleton"]
+								} ]
+							}]
+						},
+						{
+							"__identifier": "EnemyPoint",
+							"__grid": [18,3],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 18,
+							"px": [864,144],
+							"fieldInstances": [{
+								"__identifier": "Enemys",
+								"__value": [ "TreeEnemy", "Skeleton" ],
+								"__type": "Array<LocalEnum.EnemyType>",
+								"defUid": 21,
+								"realEditorValues": [ {
+									"id": "V_String",
+									"params": ["TreeEnemy"]
+								}, {
+									"id": "V_String",
+									"params": ["Skeleton"]
+								} ]
+							}]
+						},
+						{
+							"__identifier": "EnemyPoint",
+							"__grid": [17,2],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 18,
+							"px": [816,96],
+							"fieldInstances": [{
+								"__identifier": "Enemys",
+								"__value": ["TreeEnemy"],
+								"__type": "Array<LocalEnum.EnemyType>",
+								"defUid": 21,
+								"realEditorValues": [{
+									"id": "V_String",
+									"params": ["TreeEnemy"]
+								}]
+							}]
 						}
 					]
+				},
+				{
+					"__identifier": "Tiles3",
+					"__type": "Tiles",
+					"__cWid": 27,
+					"__cHei": 16,
+					"__gridSize": 48,
+					"__opacity": 1,
+					"__pxTotalOffsetX": 0,
+					"__pxTotalOffsetY": 0,
+					"__tilesetDefUid": 2,
+					"__tilesetRelPath": "items_tile3.png",
+					"levelId": 31,
+					"layerDefUid": 36,
+					"pxOffsetX": 0,
+					"pxOffsetY": 0,
+					"visible": true,
+					"optionalRules": [],
+					"intGrid": [],
+					"intGridCsv": [],
+					"autoLayerTiles": [],
+					"seed": 5230970,
+					"overrideTilesetUid": null,
+					"gridTiles": [{ "px": [96,144], "src": [0,240], "f": 0, "t": 90, "d": [83] }],
+					"entityInstances": []
 				},
 				{
 					"__identifier": "Tiles2",
@@ -6391,7 +6737,7 @@
 					"seed": 826916,
 					"overrideTilesetUid": null,
 					"gridTiles": [
-						{ "px": [48,0], "src": [0,768], "f": 0, "t": 640, "d": [1] },
+						{ "px": [48,0], "src": [96,624], "f": 0, "t": 522, "d": [1] },
 						{ "px": [96,0], "src": [96,624], "f": 0, "t": 522, "d": [2] },
 						{ "px": [144,0], "src": [96,624], "f": 0, "t": 522, "d": [3] },
 						{ "px": [192,0], "src": [96,624], "f": 0, "t": 522, "d": [4] },
@@ -6485,7 +6831,7 @@
 						{ "px": [144,288], "src": [144,672], "f": 0, "t": 563, "d": [165] },
 						{ "px": [240,288], "src": [48,672], "f": 0, "t": 561, "d": [167] },
 						{ "px": [480,288], "src": [48,672], "f": 0, "t": 561, "d": [172] },
-						{ "px": [624,288], "src": [0,768], "f": 0, "t": 640, "d": [175] },
+						{ "px": [624,288], "src": [96,720], "f": 0, "t": 602, "d": [175] },
 						{ "px": [672,288], "src": [96,720], "f": 0, "t": 602, "d": [176] },
 						{ "px": [720,288], "src": [96,720], "f": 0, "t": 602, "d": [177] },
 						{ "px": [768,288], "src": [96,720], "f": 0, "t": 602, "d": [178] },
@@ -6551,7 +6897,7 @@
 						{ "px": [960,528], "src": [96,624], "f": 0, "t": 522, "d": [317] },
 						{ "px": [1008,528], "src": [96,624], "f": 0, "t": 522, "d": [318] },
 						{ "px": [1056,528], "src": [96,624], "f": 0, "t": 522, "d": [319] },
-						{ "px": [1104,528], "src": [48,768], "f": 0, "t": 641, "d": [320] },
+						{ "px": [1104,528], "src": [96,624], "f": 0, "t": 522, "d": [320] },
 						{ "px": [1248,528], "src": [144,672], "f": 0, "t": 563, "d": [323] },
 						{ "px": [48,576], "src": [48,672], "f": 0, "t": 561, "d": [325] },
 						{ "px": [144,576], "src": [48,720], "f": 0, "t": 601, "d": [327] },
@@ -6577,7 +6923,7 @@
 						{ "px": [960,624], "src": [96,720], "f": 0, "t": 602, "d": [371] },
 						{ "px": [1008,624], "src": [96,720], "f": 0, "t": 602, "d": [372] },
 						{ "px": [1056,624], "src": [96,720], "f": 0, "t": 602, "d": [373] },
-						{ "px": [1104,624], "src": [48,768], "f": 0, "t": 641, "d": [374] },
+						{ "px": [1104,624], "src": [96,624], "f": 0, "t": 522, "d": [374] },
 						{ "px": [1248,624], "src": [144,672], "f": 0, "t": 563, "d": [377] },
 						{ "px": [48,672], "src": [48,720], "f": 0, "t": 601, "d": [379] },
 						{ "px": [96,672], "src": [96,624], "f": 0, "t": 522, "d": [380] },
@@ -7110,6 +7456,31 @@
 					"intGridCsv": [],
 					"autoLayerTiles": [],
 					"seed": 3819472,
+					"overrideTilesetUid": null,
+					"gridTiles": [],
+					"entityInstances": []
+				},
+				{
+					"__identifier": "Tiles3",
+					"__type": "Tiles",
+					"__cWid": 27,
+					"__cHei": 16,
+					"__gridSize": 48,
+					"__opacity": 1,
+					"__pxTotalOffsetX": 0,
+					"__pxTotalOffsetY": 0,
+					"__tilesetDefUid": 2,
+					"__tilesetRelPath": "items_tile3.png",
+					"levelId": 32,
+					"layerDefUid": 36,
+					"pxOffsetX": 0,
+					"pxOffsetY": 0,
+					"visible": true,
+					"optionalRules": [],
+					"intGrid": [],
+					"intGridCsv": [],
+					"autoLayerTiles": [],
+					"seed": 5380789,
 					"overrideTilesetUid": null,
 					"gridTiles": [],
 					"entityInstances": []
@@ -7720,6 +8091,31 @@
 					"intGridCsv": [],
 					"autoLayerTiles": [],
 					"seed": 1101015,
+					"overrideTilesetUid": null,
+					"gridTiles": [],
+					"entityInstances": []
+				},
+				{
+					"__identifier": "Tiles3",
+					"__type": "Tiles",
+					"__cWid": 27,
+					"__cHei": 16,
+					"__gridSize": 48,
+					"__opacity": 1,
+					"__pxTotalOffsetX": 0,
+					"__pxTotalOffsetY": 0,
+					"__tilesetDefUid": 2,
+					"__tilesetRelPath": "items_tile3.png",
+					"levelId": 35,
+					"layerDefUid": 36,
+					"pxOffsetX": 0,
+					"pxOffsetY": 0,
+					"visible": true,
+					"optionalRules": [],
+					"intGrid": [],
+					"intGridCsv": [],
+					"autoLayerTiles": [],
+					"seed": 7736895,
 					"overrideTilesetUid": null,
 					"gridTiles": [],
 					"entityInstances": []

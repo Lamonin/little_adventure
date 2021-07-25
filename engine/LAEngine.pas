@@ -995,7 +995,7 @@ type
       (position.x, position.y) := (x, y);
       point.AnimMoveTo(x*48,y*48, 0);
       sprite.PlayAnim('idledown');
-      MoveEvent(); CheckGridUse();
+      if MoveEvent<>nil then MoveEvent(); CheckGridUse();
     end;
     
     procedure MoveOn(x,y:integer; dir:string);
@@ -1093,6 +1093,7 @@ type
   ///Загружает уровень с именем lname и настраивает сетку grid.
   procedure LoadLevel(lname:string);
   begin
+    
     var loader := new LALoader('data/levels/LALevels.ldtk');
     GD.TransPic.Show(1000, procedure()-> begin GD.Player.isBlocked := False end);
     var i := -1;
@@ -1104,6 +1105,7 @@ type
     var val := loader.GetValue&<JToken>('$.levels['+i+'].layerInstances[0].entityInstances');
     var x,y:integer;
     if (GD.Player = nil) then GD.Player := new PlayerWorld(1,1);
+    
     for var j:=0 to val.Count()-1 do begin
       var fields := val[j]['fieldInstances'];
       x := Integer(val[j]['__grid'][0]);
