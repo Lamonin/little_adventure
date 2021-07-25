@@ -272,11 +272,10 @@ type
   type
   //ОПИСАНИЕ ИНТЕРФЕЙСНОЙ ЧАСТИ
   ITransitionPic = interface
-    procedure Show( p:delegate:=nil; delay:integer:=-1);
-    procedure Show(message:string; delay:integer:=-1; p:delegate:=nil);
+    procedure Show(delay:integer;p:delegate:=nil);
+    procedure Show(message:string; delay:integer; p:delegate:=nil);
     procedure Hide();
     procedure ToFront();
-    property CanHide: boolean read;
   end;
 
   IUseObject = interface
@@ -651,7 +650,7 @@ type
     constructor Create();
     begin
       var loader := new LALoader('data/userdata.json');
-      max_hp:= 20;
+      max_hp:= loader.GetValue&<integer>('$.max_hp');;
       hp:= loader.GetValue&<integer>('$.hp');
       armor:= loader.GetValue&<integer>('$.armor');
       attackDmg:= 8;
@@ -898,6 +897,11 @@ type
     procedure Pickup(); override;
     begin
       inherited Pickup();
+      if (BattleHandler.Player.SetGetArmor>armorValue) then begin
+        var messages:array of string := ( $'Эта броня хуже вашей.');
+        GD.DialogHandler.StartDialog(messages);
+        exit;
+      end;
       BattleHandler.Player.SetGetArmor := armorValue;
       var messages:array of string := ( $'Вы надели броню поглощающую {armorValue} ед. урона.');
       GD.DialogHandler.StartDialog(messages);
@@ -905,8 +909,7 @@ type
     public
     constructor Create(x,y:integer; amount:integer);
     begin
-      inherited Create(x,y, 'img/armor.png');
-      armorValue := amount;
+      inherited Create(x,y, 'img/armor.png'); armorValue := amount;
     end;
     end;
 
@@ -1053,7 +1056,6 @@ type
   TransitionPic = class (ITransitionPic)
     private
     pic:RectangleWPF;
-    isCanHide:boolean;
     proc:delegate;
     public
     constructor Create;
@@ -1066,43 +1068,33 @@ type
     end;
     
     ///Показать изображение перехода
-    procedure Show(p:delegate:=nil; delay:integer:=-1) := Show('Для продолжения нажмите ПРОБЕЛ', delay, p);
+    procedure Show(delay:integer; p:delegate:=nil) := Show('Загрузка уровня...', delay, p);
     
     ///Показать изображение перехода с нужным текстом после загрузки
-    procedure Show(message:string; delay:integer:=-1; p:delegate:=nil);
+    procedure Show(message:string; delay:integer; p:delegate:=nil);
     begin
       proc:=p;
       if (GD.player <> nil) then GD.player.isBlocked := True; //Блокируем движение игрока
-      
-      if (delay <> -1) then begin
-        Redraw(procedure -> (pic.Visible, pic.Text) := (True, message));
-        DelayAction(delay, procedure -> Hide()); exit;
-      end;
-      
-      Redraw(procedure -> (pic.Visible, pic.Text) := (True, 'Загрузка уровня...'));
-
-      DelayAction(1000, procedure -> begin
-        isCanHide := True; pic.Text := message; end);
+      Redraw(procedure -> (pic.Visible, pic.Text) := (True, message));
+      DelayAction(delay, procedure -> Hide());
     end;
     
     ///Скрыть изображение перехода
     procedure Hide();
     begin
       if (proc<>nil) then proc;
-      isCanHide := False; pic.Visible := False;
+      pic.Visible := False;
     end;
     
     procedure ToFront();
     begin if (pic <> nil) then pic.ToFront(); end;
-    
-    property CanHide:boolean read isCanHide;
   end;
   
   ///Загружает уровень с именем lname и настраивает сетку grid.
   procedure LoadLevel(lname:string);
   begin
     var loader := new LALoader('data/levels/LALevels.ldtk');
-    GD.TransPic.Show(procedure()-> begin GD.Player.isBlocked := False end);
+    GD.TransPic.Show(1000, procedure()-> begin GD.Player.isBlocked := False end);
     var i := -1;
     
     //Находим номер уровня в массиве
@@ -1216,31 +1208,25 @@ type
   end;
   
   procedure DrawMainMenu();
-  var b_continue, b_startNew, b_rules, b_about, b_exit:Button;
+  var b_continue, b_startNew, b_exit:Button;
   begin
     var loader := new LALoader('data/userdata.json');
     
-    b_continue := new Button(32, 694, 'rect_menu_wide.png', 'rect_menu_wide_click.png');
+    b_continue := new Button(510, 561, 'rect_menu_wide.png', 'rect_menu_wide_click.png');
     b_continue.Text := 'ПРОДОЛЖИТЬ'; 
     if loader.GetValue&<string>('$.current_level') = '' then b_continue.Active := False;
     
-    b_startNew := new Button(345, 694, 'rect_menu_wide.png', 'rect_menu_wide_click.png');
+    b_startNew := new Button(510, 625, 'rect_menu_wide.png', 'rect_menu_wide_click.png');
     b_startNew.Text := 'НОВАЯ ИГРА';
-    
-    b_rules := new Button(656, 694, 'rect_menu_short.png', 'rect_menu_short_click.png');
-    b_rules.Text := 'ПРАВИЛА';
-   
-    b_about := new Button(864, 694, 'rect_menu_short.png', 'rect_menu_short_click.png');
-    b_about.Text := 'О ПРОЕКТЕ';
 
     ///Завершает работу игры.
-    b_exit := new Button(1072, 694, 'rect_menu_short.png', 'rect_menu_short_click.png');
+    b_exit := new Button(510, 689, 'rect_menu_wide.png', 'rect_menu_wide_click.png');
     b_exit.Text := 'ВЫХОД';
     
     //Делегат, при вызове удаляет кнопки
     var delButtons := procedure() -> begin
       b_continue.Destroy(); b_startNew.Destroy();
-      b_rules.Destroy(); b_about.Destroy(); b_exit.Destroy();
+      b_exit.Destroy();
     end;
     
     b_continue.OnClick += procedure() -> begin
@@ -1262,9 +1248,6 @@ type
       procedure() ->DrawMainMenu());
       delButtons();
     end;
-    
-    b_rules.OnClick += procedure() -> begin DrawRulesMenu(); delButtons; end;
-    b_about.OnClick += procedure() -> begin end;
     b_exit.OnClick += procedure() -> begin writeln('Игра закрыта!'); Halt; end;
   end;
   

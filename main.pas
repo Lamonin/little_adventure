@@ -5,7 +5,6 @@ uses LAEngine in 'engine/LAEngine.pas';
 procedure KeyDown(k: Key);
 begin
   ///Если возможно, то скрываем изображение перехода
-  if (GD.TransPic.CanHide) and (k = Key.Space) then GD.TransPic.Hide();
   if (GD.Player = nil) or (GD.Player.isBlocked) then exit;
   if (k = key.E) then begin
     if (GD.DialogHandler<>nil) and (GD.DialogHandler.NextMessage) then exit;
