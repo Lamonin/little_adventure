@@ -3,8 +3,7 @@
 uses Newtonsoft.Json.Linq, WPFObjects, Timers, Loader;
 
 //Вспомогательные методы для работы
-type
-  delegate = procedure;
+type delegate = procedure;
 ///Выполняет действие p с через время delay
 procedure DelayAction(delay:integer; const p:delegate);
 begin
@@ -76,9 +75,9 @@ type
   
   //##############-НАЧАЛО_ИНТЕРФЕЙС-################
   ///Пример использования:
-  ///var b:= new LAButton(100, 200, 'img/ui/play.png', 'img/ui/playpress.png');
+  ///var b:= new Button(100, 200, 'img/ui/play.png', 'img/ui/playpress.png');
   ///b.OnClick += procedure() -> begin КОД КОТОРЫЙ ВЫПОЛНИТСЯ ПРИ НАЖАТИИ КНОПКИ end;
-  LAButton = class
+  Button = class
     private
     pic:PictureWPF; isClicked, isActive:boolean;
     idlePic, clickPic, buttonText:string;
@@ -110,11 +109,16 @@ type
       pic.Text := buttonText;
       pic := ApplyFontSettings(pic) as PictureWPF;
     end;
+
+    procedure SetActive(t:boolean);
+    begin
+      isActive := t; var ts:= clickPic;
+      if t then ts:= idlePic;
+      ChangePicture(pic, ts); ApplyText();
+    end;
     
     procedure SetText(t:string);
-    begin
-      buttonText := t; ApplyText();
-    end;
+    begin buttonText := t; ApplyText(); end;
     
     public
      //Событие нажатия на кнопку
@@ -139,7 +143,7 @@ type
     end;
     
     property Text: string read buttonText write SetText;
-    property Active: boolean read isActive write isActive;
+    property Active: boolean read isActive write SetActive;
   end;
   //##############-КОНЕЦ_ИНТЕРФЕЙС-#################
   
@@ -272,7 +276,7 @@ type
     procedure Show(message:string; delay:integer:=-1; p:delegate:=nil);
     procedure Hide();
     procedure ToFront();
-    property CanHide:boolean read;
+    property CanHide: boolean read;
   end;
 
   IUseObject = interface
@@ -306,12 +310,12 @@ type
   levelGridArr = array[0..15, 0..26] of levelGridRecord;
   
   ///Общие данные игры по ходу её выполнения
-  ///Обращение к данным делается, например, так: LAGD.Player
-  LAGD = static class
+  ///Обращение к данным делается, например, так: GD.Player
+  GD = static class
     public
     static Player:IPlayerWorld; //Игрок в мире
     static Grid:levelGridArr; //Сетка уровня
-    static LevelPic, CombatPic, BgPic:PictureWPF; //Изображения уровня, поля битвы и заднего фона меню
+    static LevelPic, CombatPic, BgPic:PictureWPF;
     static TransPic:ITransitionPic; //Экран перехода
     static DialogHandler:IDialogHandler;
   end;
@@ -322,7 +326,6 @@ type
     procedure Attack();
     function AddAction():boolean;
     property GetDelay: integer Read;
-    property GetDeath: boolean Read;
   end;
   
   IEnemy = interface (IBattleEntity)
@@ -366,38 +369,33 @@ type
     procedure Attack();virtual; begin end;
     
     property GetDelay: integer Read delay;
-    property GetDeath: boolean Read isDeath;
   end;
 
-  BattleProcessor = class
+  BattleHandler = class
     private
     static ProcessTimer: Timer;
     static Stoptimer, isPlayerTurn: boolean;
-    static BattleEnemyPanel, PlayerDamagePanel, PlayerArmorPanel, PlayerHPPanel, TurnRect : PictureWPF;
-    static b_attack, b_run: LAButton;
+    static EnemyPanel, DamagePanel, ArmorPanel, HpPanel, TurnRect : PictureWPF;
+    static b_attack, b_run: Button;
 
     //Обработка очереди действий сущностей
     static procedure ProcessAttack(ActionList: List<IBattleEntity>);
     begin
-    var I:= 0;
-    ProcessTimer := new Timer(100,procedure() -> begin 
+    var i:= 0;
+    ProcessTimer := new Timer(100, procedure() -> begin 
       if isPlayerTurn then exit;
-      if I = ActionList.Count then begin
-        ProcessTimer.Stop;
-        Stoptimer:=False;
-        exit;
+      if i = ActionList.Count then begin
+        ProcessTimer.Stop(); Stoptimer:=False; exit;
       end;
-      ProcessTimer.Interval:= ActionList[I].GetDelay;
+      ProcessTimer.Interval:= ActionList[i].GetDelay;
       //Ходит игрок
-      if ActionList[I] is IBattlePlayer then begin 
+      if ActionList[i] is IBattlePlayer then begin 
         isPlayerTurn:= True; 
         TurnRect.Text := 'ВАШ ХОД';
-        I+=1;
-        exit; 
+        i+=1; exit; 
       end;
       TurnRect.Text := 'ХОД ПРОТИВНИКА';
-      ActionList[I].Attack();
-      I+=1;
+      ActionList[i].Attack(); i+=1;
      end);
      ProcessTimer.Start;
     end;
@@ -405,7 +403,7 @@ type
     public
     static CombatTimer: Timer;
     static EnemyList: List<IEnemy>;
-    static PlayerBattle: IBattlePlayer;
+    static Player: IBattlePlayer;
     static SelectedEnemy: IEnemy;
     static OnBattleEndEvent: procedure;
     static enemyCount:integer;
@@ -413,96 +411,92 @@ type
     static procedure EndBattle(Res:string);
     begin
       b_attack.isActive := false; b_run.isActive := false;
-      CombatTimer.Stop(); ProcessTimer.Stop(); Stoptimer := False; PlayerStep := False;
+      CombatTimer.Stop(); ProcessTimer.Stop(); Stoptimer := False; isPlayerTurn := False;
       if (Res <> 'Run') then begin
-        LAGD.Grid[LAGD.Player.GetY, LAGD.Player.GetX].GridObject.Destroy();
-        LAGD.Grid[LAGD.Player.GetY, LAGD.Player.GetX].GridObject := nil;
+        GD.Grid[GD.Player.GetY, GD.Player.GetX].GridObject.Destroy();
+        GD.Grid[GD.Player.GetY, GD.Player.GetX].GridObject := nil;
       end;
       DelayAction(1250, procedure() -> begin
         if (Res = 'Win') then //Игрок победил
         begin
-          LAGD.TransPic.Show('ПОБЕДА', 1000, procedure() -> begin 
-            LAGD.Player.isBlocked := False; 
+          GD.TransPic.Show('ПОБЕДА', 1000, procedure() -> begin 
+            GD.Player.isBlocked := False; 
           end);
         end
         else if (Res = 'Lose') then begin //Иначе проиграл
-          LAGD.TransPic.Show('ПОРАЖЕНИЕ', 1000, procedure() -> begin
+          GD.TransPic.Show('ПОРАЖЕНИЕ', 1000, procedure() -> begin
             CloseLevel();
-            LAGD.Player.OnEnterBattleEvent := nil;
-            LAGD.Player.Destroy();
-            LAGD.Player := nil;
-            LAGD.BgPic.Visible := True;
-            BattleProcessor.PlayerBattle := nil;
+            GD.Player.OnEnterBattleEvent := nil;
+            GD.Player.Destroy();
+            GD.Player := nil;
+            GD.BgPic.Visible := True;
+            BattleHandler.Player := nil;
             DrawMainMenu();
           end);
         end
         else if (Res = 'Run') then begin
-          LAGD.TransPic.Show('ВЫ СБЕЖАЛИ', 1000, procedure() -> begin 
-            LAGD.Player.isBlocked := False;
-
-          end);
+          GD.TransPic.Show('ВЫ СБЕЖАЛИ', 1000, procedure() -> GD.Player.isBlocked := False);
         end;
         //Удаляем интерфейс, сбрасываем параметры
         b_attack.Destroy(); b_run.Destroy();
-        BattleEnemyPanel.Destroy(); PlayerDamagePanel.Destroy(); PlayerArmorPanel.Destroy();
-        PlayerHPPanel.Destroy(); TurnRect.Destroy();
+        EnemyPanel.Destroy(); DamagePanel.Destroy(); ArmorPanel.Destroy();
+        HpPanel.Destroy(); TurnRect.Destroy();
 
         foreach var tc in EnemyList do begin tc.Destroy(); end; // Уничтожаем врагов
         EnemyList.Clear();
         OnBattleEndEvent := nil; SelectedEnemy := nil; enemyCount := 0;
-
-        LAGD.CombatPic.Destroy();
+        GD.CombatPic.Destroy();
       end);
     end;
 
     static procedure StartBattle();
       begin
       //Инициализируем элементы интерфейса боя
-      b_attack:= new LAButton(167, 692, 'rect_button_battle.png', 'rect_button_battle_click.png');
+      b_attack:= new Button(167, 692, 'rect_button_battle.png', 'rect_button_battle_click.png');
       b_attack.Text := 'АТАКА';
       b_attack.OnClick += procedure() -> begin
-        if (BattleProcessor.PlayerStep) and (BattleProcessor.SelectedEnemy<> nil) then
-        begin BattleProcessor.PlayerStep:= False;
-          BattleProcessor.PlayerBattle.Attack();
-          BattleProcessor.SelectedEnemy.Deselect();
+        if (BattleHandler.isPlayerTurn) and (BattleHandler.SelectedEnemy<> nil) then
+        begin BattleHandler.isPlayerTurn:= False;
+          BattleHandler.Player.Attack();
+          BattleHandler.SelectedEnemy.Deselect();
         end;
       end;
 
-      b_run:= new LAButton(656, 692, 'rect_button_battle.png', 'rect_button_battle_click.png');
+      b_run:= new Button(656, 692, 'rect_button_battle.png', 'rect_button_battle_click.png');
       b_run.Text := 'ПОБЕГ';
       b_run.OnClick += procedure() -> begin
         b_run.isActive := False;
-        BattleProcessor.EndBattle('Run');
+        BattleHandler.EndBattle('Run');
       end;
       
       TurnRect := new PictureWPF(327, 572, 'img\ui\rect_battle_turn.png');
       TurnRect := ApplyFontSettings(TurnRect) as PictureWPF;
       TurnRect.FontSize := 28;
       
-      BattleEnemyPanel:= new PictureWPF(167, 616, 'img\ui\rect_panel_battle.png');
-      BattleEnemyPanel := ApplyFontSettings(BattleEnemyPanel) as PictureWPF;
+      EnemyPanel:= new PictureWPF(167, 616, 'img\ui\rect_panel_battle.png');
+      EnemyPanel := ApplyFontSettings(EnemyPanel) as PictureWPF;
 
-      foreach var t in EnemyList do BattleEnemyPanel.Text += t.GetName + '  |  ';
-      BattleEnemyPanel.Text :=  Copy(BattleEnemyPanel.Text, 1, BattleEnemyPanel.Text.Length - 5);
+      foreach var t in EnemyList do EnemyPanel.Text += t.GetName + '  |  ';
+      EnemyPanel.Text :=  Copy(EnemyPanel.Text, 1, EnemyPanel.Text.Length - 5);
       
-      PlayerHPPanel := new PictureWPF(167, 572, 'img\ui\hp_bar.png');
-      PlayerArmorPanel := new PictureWPF(936, 572, 'img\ui\rect_battle_mini.png');
-      PlayerDamagePanel := new PictureWPF(1041, 572, 'img\ui\rect_battle_mini.png');
+      HpPanel := new PictureWPF(167, 572, 'img\ui\hp_bar.png');
+      ArmorPanel := new PictureWPF(936, 572, 'img\ui\rect_battle_mini.png');
+      DamagePanel := new PictureWPF(1041, 572, 'img\ui\rect_battle_mini.png');
 
       var icon := new PictureWPF(0,0,'img\ui\icon_hp.png');
-      PlayerHPPanel.AddChild(icon, Alignment.LeftTop);
-      PlayerHPPanel := ApplyFontSettings(PlayerHPPanel) as PictureWPF;
-      BattleProcessor.PlayerHPPanel.Text := PlayerBattle.GetHP +'/'+PlayerBattle.GetMaxHP;
+      HpPanel.AddChild(icon, Alignment.LeftTop);
+      HpPanel := ApplyFontSettings(HpPanel) as PictureWPF;
+      BattleHandler.HpPanel.Text := Player.GetHP +'/'+Player.GetMaxHP;
       
       icon := new PictureWPF(0,0,'img\ui\icon_armor.png');
-      PlayerArmorPanel.AddChild(icon, Alignment.LeftTop);
-      PlayerArmorPanel := ApplyFontSettings(PlayerArmorPanel) as PictureWPF;
-      PlayerArmorPanel.Text := PlayerBattle.SetGetArmor.ToString();
+      ArmorPanel.AddChild(icon, Alignment.LeftTop);
+      ArmorPanel := ApplyFontSettings(ArmorPanel) as PictureWPF;
+      ArmorPanel.Text := Player.SetGetArmor.ToString();
 
       icon := new PictureWPF(0,0,'img\ui\icon_damage.png');
-      PlayerDamagePanel.AddChild(icon, Alignment.LeftTop);
-      PlayerDamagePanel := ApplyFontSettings(PlayerDamagePanel) as PictureWPF;
-      PlayerDamagePanel.Text := PlayerBattle.GetDamage.ToString();
+      DamagePanel.AddChild(icon, Alignment.LeftTop);
+      DamagePanel := ApplyFontSettings(DamagePanel) as PictureWPF;
+      DamagePanel.Text := Player.GetDamage.ToString();
       //Закончили инициализацию интерфейса
 
       CombatTimer := new Timer(250, procedure() ->
@@ -511,7 +505,7 @@ type
         if (enemyCount <= 0) then EndBattle('Win'); 
         var ActionList:= new List<IBattleEntity>();
         foreach var t in EnemyList do if t.AddAction() then ActionList.Add(t);                 
-        if PlayerBattle.AddAction() then ActionList.Add(PlayerBattle);
+        if Player.AddAction() then ActionList.Add(Player);
         if (ActionList.Count>0) then
         begin       
           Stoptimer:= True;
@@ -519,20 +513,18 @@ type
         end;
         end);
       end;
-    static property PBattleEnemyPanel: PictureWPF read BattleEnemyPanel write BattleEnemyPanel;
-    static property PlayerStep: boolean Read isPlayerTurn write isPlayerTurn;
   end;
 
   Enemy = class(BattleEntity, IEnemy)
     private
     name:string;
     Sprite : LSprite;
-    LockThis, isDeath: boolean; //Выбран ли этот враг
+    LockThis, isDeath: boolean; //Выбран ли этот враг || Убит ли этот враг
     CirclePic, ShadowPic: PictureWPF; //Круг выделения и тень
     ///Нажатие на врага в бою
-    procedure klik(x, y: real; mousebutton: integer);
+    procedure klik(x, y: real; mb: integer);
     begin
-      if (Sprite <> nil) and (mousebutton=1) and (Sprite.PtInside(x,y)) and not (LockThis) then 
+      if (Sprite <> nil) and (mb=1) and (Sprite.PtInside(x,y)) and not (LockThis) then 
       begin
         Select();
       end;
@@ -541,7 +533,7 @@ type
     procedure Death();
     begin
       isDeath := True;
-      BattleProcessor.enemyCount -= 1;
+      BattleHandler.enemyCount -= 1;
       OnMouseDown -= klik;
       Sprite.PlayAnim('Death');
     end;
@@ -554,38 +546,39 @@ type
     public
     constructor Create(x,y:integer);
     begin
-      BattleProcessor.OnBattleEndEvent += procedure -> Destroy();
-      BattleProcessor.enemyCount += 1;
+      BattleHandler.OnBattleEndEvent += procedure -> Destroy();
+      BattleHandler.enemyCount += 1;
       OnMouseDown += klik;
     end;
 
     procedure CreateCircleShadowPics(yOffset:integer);
     begin
-      ShadowPic := new PictureWPF(Sprite.Pos.X-65, Sprite.Pos.Y+Sprite.Height/2-yOffset, 'img\enemy\shadow.png');
-      CirclePic:= new PictureWPF(Sprite.Pos.X-65,Sprite.Pos.Y+Sprite.Height/2-45,'img\enemy\circle.png');
+      var sp := Sprite.Pos;
+      ShadowPic := new PictureWPF(sp.X-65, sp.Y+Sprite.Height/2-yOffset, 'img\enemy\shadow.png');
+      CirclePic:= new PictureWPF(sp.X-65, sp.Y+Sprite.Height/2-45,'img\enemy\circle.png');
       CirclePic.Visible := False;
     end;
 
     procedure Select();
     begin
-      if (BattleProcessor.SelectedEnemy<>nil) then 
-        BattleProcessor.SelectedEnemy.Deselect();
+      if (BattleHandler.SelectedEnemy<>nil) then 
+        BattleHandler.SelectedEnemy.Deselect();
       CirclePic.Visible := True;
       LockThis:= True;
-      BattleProcessor.SelectedEnemy:= self;
+      BattleHandler.SelectedEnemy:= self;
     end;
 
     procedure Deselect();
     begin
-      BattleProcessor.SelectedEnemy.GetCirclePic.Visible := False;    
-      BattleProcessor.SelectedEnemy.SetLockThis:= False;
-      BattleProcessor.SelectedEnemy := nil;
+      BattleHandler.SelectedEnemy.GetCirclePic.Visible := False;    
+      BattleHandler.SelectedEnemy.SetLockThis:= False;
+      BattleHandler.SelectedEnemy := nil;
     end;
 
     procedure Attack(); override;      
     begin
-      if (isDeath) or (BattleProcessor.PlayerBattle.GetHP <= 0) then exit;
-      BattleProcessor.PlayerBattle.Damage(attackDmg);
+      if (isDeath) or (BattleHandler.Player.GetHP <= 0) then exit;
+      BattleHandler.Player.Damage(attackDmg);
       Sprite.PlayAnim('Attack');
     end;
     
@@ -663,7 +656,7 @@ type
     max_hp, armor:integer; //Максимальное здоровье игрока
     procedure Death();
     begin
-      Writeln('Игрок проиграл'); BattleProcessor.EndBattle('Lose');
+      Writeln('Игрок проиграл'); BattleHandler.EndBattle('Lose');
     end;
     public
     constructor Create();
@@ -679,8 +672,8 @@ type
     
     procedure Attack();override;      
     begin
-      if (BattleProcessor.SelectedEnemy = nil) then exit; 
-      BattleProcessor.SelectedEnemy.Damage(AttackDmg);
+      if (BattleHandler.SelectedEnemy = nil) then exit; 
+      BattleHandler.SelectedEnemy.Damage(AttackDmg);
     end;
 
     procedure AddHP(val:integer);
@@ -695,10 +688,10 @@ type
       hp -= Dmg;
       if (hp<=0) then begin
         hp := 0;
-        BattleProcessor.PlayerHPPanel.Text := hp +'/'+max_hp;
+        BattleHandler.HpPanel.Text := hp +'/'+max_hp;
         Death(); exit;
       end;
-      BattleProcessor.PlayerHPPanel.Text := hp +'/'+max_hp;
+      BattleHandler.HpPanel.Text := hp +'/'+max_hp;
     end;
     
     property GetHP: integer Read hp;
@@ -717,7 +710,7 @@ type
     isDialogue: boolean; //Идёт ли диалог
     procedure EndDialogue();
     begin
-      LAGD.Player.SetUsing := False;
+      GD.Player.SetUsing := False;
       dialogRect.Visible := False;
       messageTimer.Stop();
       isDialogue := False;
@@ -742,11 +735,9 @@ type
     procedure StartDialog(messages:array of string);
     begin
       dialogRect.ToFront();
-      messageNum := -1; messageCount := 1;
-      self.messages := messages; //Сохраняем сообщения
+      (messageNum, messageCount, self.messages, isDialogue) := (-1,1,messages, True);
       dialogRect.Visible := True;
-      LAGD.Player.SetUsing := True;
-      isDialogue := True;
+      GD.Player.SetUsing := True;
       NextMessage();
     end;
 
@@ -787,8 +778,8 @@ type
 
     procedure Use(); override;
     begin
-      if (LAGD.DialogHandler <> nil) then 
-        LAGD.DialogHandler.StartDialog(messages);
+      if (GD.DialogHandler <> nil) then 
+        GD.DialogHandler.StartDialog(messages);
     end;
     end;
   
@@ -804,17 +795,17 @@ type
     begin
       if (ePointAnim = nil) or (isCompleted) then exit;
       //Сколько клеток до игрока
-      var distance := Round(Sqrt((x - LAGD.Player.GetX)**2 + (y - LAGD.Player.GetY)**2));
+      var distance := Round(Sqrt((x - GD.Player.GetX)**2 + (y - GD.Player.GetY)**2));
       if (distance < 2) then ePointAnim.Visible := True else ePointAnim.Visible := False;
       
-      if (LAGD.Player.GetX <> x) or (LAGD.Player.GetY <> y) then exit;
-      DelayAction(500, procedure -> LAGD.Player.OnEnterBattleEvent);
+      if (GD.Player.GetX <> x) or (GD.Player.GetY <> y) then exit;
+      DelayAction(500, procedure -> GD.Player.OnEnterBattleEvent);
       //Начинаем бой, если игрок стоит на точке начала боя.
-      LAGD.TransPic.Show('Начало боя', 1000, procedure -> BattleProcessor.CombatTimer.Start);
-      LAGD.Player.isBlocked := True; //Блокируем управление игроком
-      LAGD.CombatPic := new PictureWPF(0, 0,'data\levels\LALevels\png\CombatField.png');
+      GD.TransPic.Show('Начало боя', 1000, procedure -> BattleHandler.CombatTimer.Start);
+      GD.Player.isBlocked := True; //Блокируем управление игроком
+      GD.CombatPic := new PictureWPF(0, 0,'data\levels\LALevels\png\CombatField.png');
 
-      BattleProcessor.EnemyList:= new List<IEnemy>();
+      BattleHandler.EnemyList:= new List<IEnemy>();
       for var i:= 0 to EnemyOnPoint.Length-1 do
         case (i+1) of
             1: CreateEnemy(i, 13, 5);
@@ -823,7 +814,7 @@ type
             4: CreateEnemy(i, 7, 5);
             5: CreateEnemy(i, 19, 5);
         end;
-      BattleProcessor.StartBattle();
+      BattleHandler.StartBattle();
     end;
 
     procedure CreateEnemy(Index:integer; X,Y:integer);
@@ -834,7 +825,7 @@ type
         'TreeEnemy': E:= new TreeEnemy(X,Y);
         'Golem': E:= new GolemEnemy(X,Y);
       end;
-      BattleProcessor.EnemyList.Add(E);
+      BattleHandler.EnemyList.Add(E);
     end;
 
     public
@@ -850,8 +841,8 @@ type
       var p:Point; p.X := x*48; p.Y := y*48 + 16;
       ePointAnim.Pos := p; ePointAnim.Visible := False; ePointAnim.PlayAnim('idle');
       P.X := x; p.Y := y;
-      LAGD.Player.OnMoveEvent += procedure -> CheckPlayerDistance();
-      LAGD.Player.OnEnterBattleEvent += procedure -> if (ePointAnim <> nil) then ePointAnim.Visible := False;
+      GD.Player.OnMoveEvent += procedure -> CheckPlayerDistance();
+      GD.Player.OnEnterBattleEvent += procedure -> if (ePointAnim <> nil) then ePointAnim.Visible := False;
     end;
     
     procedure Destroy(); override;
@@ -859,8 +850,8 @@ type
       battleCellCount -= 1;
       isCompleted := True;
       ePointAnim.Destroy(); ePointAnim := nil;
-      LAGD.Player.OnMoveEvent -= procedure -> CheckPlayerDistance();
-      LAGD.Player.OnEnterBattleEvent -= procedure -> if (ePointAnim <> nil) then ePointAnim.Visible := False;
+      GD.Player.OnMoveEvent -= procedure -> CheckPlayerDistance();
+      GD.Player.OnEnterBattleEvent -= procedure -> if (ePointAnim <> nil) then ePointAnim.Visible := False;
     end;
     end;
 
@@ -877,7 +868,7 @@ type
     begin
       if BattleCell.battleCellCount > 0 then begin
         var messages:array of string := ('За моей спиной остались противники, я не могу быть небрежным!');
-        LAGD.DialogHandler.StartDialog(messages);
+        GD.DialogHandler.StartDialog(messages);
       end
       else ChangeLevel(levelName);
     end;
@@ -888,20 +879,15 @@ type
     sprite: PictureWPF;
     isPickup: boolean; //Взаимодействовал ли персонаж игрока с объектом
     ///Происходит "подбор" объекта
-    procedure Pickup(); virtual; begin isPickup := True; sprite.Destroy(); sprite := nil; end;
+    procedure Pickup(); virtual; 
+    begin isPickup := True; sprite.Destroy(); sprite := nil; end;
 
     public
     constructor Create(x,y:integer; path:string);
-    begin
-      sprite := new PictureWPF(x*48, y*48, path);
-    end;
+    begin sprite := new PictureWPF(x*48, y*48, path); end;
     procedure Use(); override; begin if not isPickup then Pickup(); end;
-    
     procedure Destroy(); override;
-    begin
-      if sprite <> nil then sprite.Destroy();
-      Writeln('Поднимаемый объект уничтожен!');
-    end;
+    begin if sprite <> nil then sprite.Destroy(); end;
     end;
   
   PotionPickup = class (PickableCell)
@@ -910,14 +896,15 @@ type
     procedure Pickup(); override;
     begin
       inherited Pickup();
-      BattleProcessor.PlayerBattle.AddHP(potionPower);
-      var messages:array of string := ($'Вы восстановили {potionPower} маны.');
-      LAGD.DialogHandler.StartDialog(messages);
+      BattleHandler.Player.AddHP(potionPower);
+      var messages:array of string := ($'Вы восстановили {potionPower} ед. маны.');
+      GD.DialogHandler.StartDialog(messages);
     end;
     public
-    constructor Create(x,y:integer);
+    constructor Create(x,y:integer; amount:integer);
     begin
       inherited Create(x,y, 'img/potion.png');
+      potionPower := amount;
     end;
     end;
 
@@ -927,14 +914,15 @@ type
     procedure Pickup(); override;
     begin
       inherited Pickup();
-      BattleProcessor.PlayerBattle.SetGetArmor := armorValue;
+      BattleHandler.Player.SetGetArmor := armorValue;
       var messages:array of string := ( $'Вы надели броню поглощающую {armorValue} ед. урона.');
-      LAGD.DialogHandler.StartDialog(messages);
+      GD.DialogHandler.StartDialog(messages);
     end;
     public
-    constructor Create(x,y:integer);
+    constructor Create(x,y:integer; amount:integer);
     begin
       inherited Create(x,y, 'img/armor.png');
+      armorValue := amount;
     end;
     end;
 
@@ -946,11 +934,11 @@ type
     position:GPoint;
     sprite:LSprite;
     moveTimer, updateSprite:Timer;
-    dir:string;
+    dir:string; speed:integer := 640;
     isUsing, blocked:boolean;
     MoveEvent, InBattleEvent:delegate;
 
-    procedure Blocking(blocked:boolean);
+    procedure SetBlocking(blocked:boolean);
     begin
       self.blocked := blocked;
       sprite.Visible := not blocked;
@@ -962,7 +950,7 @@ type
     procedure CheckGridUse();
     begin
       useRect.Visible := False; //По умолчани делаем его False
-      var obj := LAGD.Grid[GetY, GetX].GridObject;
+      var obj := GD.Grid[GetY, GetX].GridObject;
       if (obj <> nil) then
         if (obj is NextLevelCell) then begin useRect.Visible := True; exit; end
         else if (obj is PickableCell) then begin obj.Use(); exit; end;
@@ -975,7 +963,7 @@ type
 
       if (GetX+dx<0) or (GetX+dx>26) or (GetY+dy<0) or (GetY+dy>15) then exit;
       
-      obj := LAGD.Grid[GetY+dy, GetX+dx].GridObject;
+      obj := GD.Grid[GetY+dy, GetX+dx].GridObject;
       if (obj<>nil) and (obj is MessageCell) then useRect.Visible := True;
     end;
     
@@ -1006,7 +994,7 @@ type
       sprite.PlayAnim('idledown');
       //*************************
       //Таймер нужен чтобы игрок не двигался с бесконечным ускорением
-      moveTimer := new Timer(200, procedure -> begin moveTimer.Stop(); MoveEvent; end);
+      moveTimer := new Timer(speed, procedure -> begin moveTimer.Stop(); MoveEvent; end);
       //Обновляем позицию визуального представления игрока
       updateSprite := new Timer(10, procedure() -> begin
         var p := point.LeftTop; p.Y += 12; sprite.Pos := p;
@@ -1032,13 +1020,13 @@ type
       
       //Проверяем возможность "хода", в случае отсутствия просто "поворачиваем"
       //персонажа в нужную сторону.
-      if (GetX+x<0) or (GetX+x>26) or (GetY+y<0) or (GetY+y>15) or LAGD.Grid[GetY+y, GetX+x].CantGet then 
+      if (GetX+x<0) or (GetX+x>26) or (GetY+y<0) or (GetY+y>15) or GD.Grid[GetY+y, GetX+x].CantGet then 
         sprite.PlayAnim('rotate'+dir)
       else begin //Скорость игрока
         //Обрабатываем "поворот" и движение игрока, включая соответствующую анимацию
         sprite.PlayAnim('walk'+dir);
         position.x += x; position.y += y;
-        point.AnimMoveTo(GetX*48, GetY*48, 0.2);
+        point.AnimMoveTo(GetX*48, GetY*48, speed/1000.0);
         moveTimer.Start();
       end;
       CheckGridUse();   
@@ -1047,7 +1035,7 @@ type
     procedure UseGrid();
     begin
       if not useRect.Visible then exit;
-      var obj := LAGD.Grid[GetY, GetX].GridObject;
+      var obj := GD.Grid[GetY, GetX].GridObject;
       if (obj <> nil) and (obj is NextLevelCell) then begin
         obj.Use(); exit;
       end;
@@ -1059,7 +1047,7 @@ type
       end;
       //Если взаимодействуем с клеткой за границей экрана, то просто выходим.
       if (GetX+dx<0) or (GetX+dx>26) or (GetY+dy<0) or (GetY+dy>15) then exit;
-      obj := LAGD.Grid[GetY+dy, GetX+dx].GridObject;
+      obj := GD.Grid[GetY+dy, GetX+dx].GridObject;
       if (obj<>nil) then obj.Use();
     end;
     
@@ -1075,7 +1063,7 @@ type
     property OnEnterBattleEvent: delegate read InBattleEvent write InBattleEvent;
     property GetX: integer read floor(position.x);
     property GetY: integer read floor(position.y);
-    property isBlocked: boolean read blocked write Blocking;
+    property isBlocked: boolean read blocked write SetBlocking;
     property SetUsing: boolean write isUsing;
   end;
   
@@ -1091,7 +1079,7 @@ type
         pic := new RectangleWPF(0, 0, 1296, 768, Colors.Black);
         pic := ApplyFontSettings(pic) as RectangleWPF; pic.Visible := False;
       end);
-      OnDrawFrame += procedure(dt:real) -> LAGD.TransPic.ToFront();
+      OnDrawFrame += procedure(dt:real) -> GD.TransPic.ToFront();
     end;
     
     ///Показать изображение перехода
@@ -1101,7 +1089,7 @@ type
     procedure Show(message:string; delay:integer:=-1; p:delegate:=nil);
     begin
       proc:=p;
-      if (LAGD.player <> nil) then LAGD.player.isBlocked := True; //Блокируем движение игрока
+      if (GD.player <> nil) then GD.player.isBlocked := True; //Блокируем движение игрока
       
       if (delay <> -1) then begin
         Redraw(procedure -> (pic.Visible, pic.Text) := (True, message));
@@ -1131,7 +1119,7 @@ type
   procedure LoadLevel(lname:string);
   begin
     var loader := new LALoader('data/levels/LALevels.ldtk');
-    LAGD.TransPic.Show(procedure()-> begin LAGD.Player.isBlocked := False end);
+    GD.TransPic.Show(procedure()-> begin GD.Player.isBlocked := False end);
     var i := -1;
     
     //Находим номер уровня в массиве
@@ -1140,51 +1128,51 @@ type
     
     var val := loader.GetValue&<JToken>('$.levels['+i+'].layerInstances[0].entityInstances');
     var x,y:integer;
-    if (LAGD.Player = nil) then LAGD.Player := new PlayerWorld(1,1);
+    if (GD.Player = nil) then GD.Player := new PlayerWorld(1,1);
     for var j:=0 to val.Count()-1 do begin
+      var fields := val[j]['fieldInstances'];
       x := Integer(val[j]['__grid'][0]);
       y := Integer(val[j]['__grid'][1]);
-      var cell := LAGD.Grid[y,x];
+      var cell := GD.Grid[y,x];
       ///Определя
       case val[j]['__identifier'].ToString() of
         'Wall': cell.CantGet := True;
-        'SpawnPoint': LAGD.Player.SetPos(x,y);
+        'SpawnPoint': GD.Player.SetPos(x,y);
         'MessageObject': begin
           //Можно ли "наступить" на объект сообщения
-          var vval := val[j]['fieldInstances'];
-          if (vval[1]['__value'].ToString() = 'False') then cell.CantGet := True;
-          cell.GridObject := new MessageCell(vval[0]['__value'].ToObject&<array of string>());
+          if (fields[1]['__value'].ToString() = 'False') then cell.CantGet := True;
+          cell.GridObject := new MessageCell(fields[0]['__value'].ToObject&<array of string>());
         end;
-        'NextLevel': cell.GridObject := new NextLevelCell(val[j]['fieldInstances'][0]['__value'].ToString());
+        'NextLevel': cell.GridObject := new NextLevelCell(fields[0]['__value'].ToString());
         'EnemyPoint': begin
-          var tt:= val[j]['fieldInstances'][0]['__value'].ToObject&<array of string>();
+          var tt:= fields[0]['__value'].ToObject&<array of string>();
           cell.GridObject := new BattleCell(x,y,tt);
         end;
-        'Armor': cell.GridObject := new ArmorPickup(x,y);
-        'Potion': cell.GridObject := new PotionPickup(x,y);
+        'Armor': cell.GridObject := new ArmorPickup(x,y,fields[0]['__value'].ToObject&<integer>());
+        'Potion': cell.GridObject := new PotionPickup(x,y,fields[0]['__value'].ToObject&<integer>());
       end;
-      LAGD.Grid[y,x] := cell;
+      GD.Grid[y,x] := cell;
     end;
     //Устанавливаем изображение уровня
-    LAGD.LevelPic := new PictureWPF(0, 0,'data/levels/LALevels/png/'+lname+'.png');
-    LAGD.LevelPic.ToBack(); //Перемещаем изображение уровня назад.
+    GD.LevelPic := new PictureWPF(0, 0,'data/levels/LALevels/png/'+lname+'.png');
+    GD.LevelPic.ToBack(); //Перемещаем изображение уровня назад.
     
-    if (BattleProcessor.PlayerBattle = nil) then 
-        BattleProcessor.PlayerBattle:= new BattlePlayer;
+    if (BattleHandler.Player = nil) then 
+        BattleHandler.Player:= new BattlePlayer;
   end;
   
   ///Закрывает текущий уровень
   procedure CloseLevel();
   begin
-    if (LAGD.LevelPic = nil) then exit;
-    LAGD.LevelPic.Destroy(); //Уничтожаем старое изображение уровня
-    LAGD.LevelPic := nil;
+    if (GD.LevelPic = nil) then exit;
+    GD.LevelPic.Destroy(); //Уничтожаем старое изображение уровня
+    GD.LevelPic := nil;
     for var i := 0 to 15 do
       for var j:= 0 to 26 do begin
-        if (LAGD.Grid[i,j].GridObject <> nil) then LAGD.Grid[i,j].GridObject.Destroy();
+        if (GD.Grid[i,j].GridObject <> nil) then GD.Grid[i,j].GridObject.Destroy();
       end;
     var t : levelGridArr; //
-    LAGD.Grid := t; // Обнуляем таким образом сетку уровня
+    GD.Grid := t; // Обнуляем таким образом сетку уровня
   end;
   
   ///Меняет текущий уровень на уровень с именем lname
@@ -1194,9 +1182,9 @@ type
     //Сохраняем прогресс игрока
     var loader := new LALoader('data/userdata.json');
     loader.SetValue('$.current_level', lname);
-    if (BattleProcessor.PlayerBattle<> nil) then begin
-      loader.SetValue('$.hp', BattleProcessor.PlayerBattle.GetHP);
-      loader.SetValue('$.armor', BattleProcessor.PlayerBattle.SetGetArmor);
+    if (BattleHandler.Player<> nil) then begin
+      loader.SetValue('$.hp', BattleHandler.Player.GetHP);
+      loader.SetValue('$.armor', BattleHandler.Player.SetGetArmor);
       end;
     loader.SaveFile();
     LoadLevel(lname);
@@ -1204,15 +1192,15 @@ type
   
   //РАЗДЕЛ ОПИСАНИЯ ГЛАВНОГО МЕНЮ
   procedure DrawConfirmMenu(text:string; confirm, cancel:procedure);
-  var b_confirm, b_cancel: LAButton;
+  var b_confirm, b_cancel: Button;
   begin
     var r_body := new PictureWPF(384, 280, 'img\ui\rect_confirm.png');
     r_body.Text := text;
     r_body := ApplyFontSettings(r_body) as PictureWPF;
 
-    b_confirm := new LAButton(384, 424, 'rect_menu_rules_wide.png', 'rect_menu_rules_wide_click.png');
+    b_confirm := new Button(384, 424, 'rect_menu_rules_wide.png', 'rect_menu_rules_wide_click.png');
     b_confirm.Text := 'ОК';
-    b_cancel := new LAButton(656, 424, 'rect_menu_rules_wide.png', 'rect_menu_rules_wide_click.png');
+    b_cancel := new Button(656, 424, 'rect_menu_rules_wide.png', 'rect_menu_rules_wide_click.png');
     b_cancel.Text := 'ОТМЕНА';
     
     b_confirm.OnClick += procedure() -> begin 
@@ -1227,15 +1215,15 @@ type
   end;
   
   procedure DrawRulesMenu();
-  var b_prev, b_next, b_back:LAButton;
+  var b_prev, b_next, b_back:Button;
   begin
-    b_prev := new LAButton(309, 598, 'rect_menu_rules_wide.png', 'rect_menu_rules_wide_click.png');
+    b_prev := new Button(309, 598, 'rect_menu_rules_wide.png', 'rect_menu_rules_wide_click.png');
     b_prev.Text := 'ПРЕДЫДУЩИЙ';
     
-    b_back := new LAButton(581, 598, 'rect_menu_rules_short.png', 'rect_menu_rules_short_click.png');
+    b_back := new Button(581, 598, 'rect_menu_rules_short.png', 'rect_menu_rules_short_click.png');
     b_back.Text := 'В МЕНЮ';
     
-    b_next := new LAButton(731, 598, 'rect_menu_rules_wide.png', 'rect_menu_rules_wide_click.png');
+    b_next := new Button(731, 598, 'rect_menu_rules_wide.png', 'rect_menu_rules_wide_click.png');
     b_next.Text := 'СЛЕДУЮЩИЙ';
     
     b_back.OnClick += procedure() -> begin
@@ -1245,24 +1233,25 @@ type
   end;
   
   procedure DrawMainMenu();
-  var b_continue, b_startNew, b_rules, b_about, b_exit:LAButton;
+  var b_continue, b_startNew, b_rules, b_about, b_exit:Button;
   begin
     var loader := new LALoader('data/userdata.json');
     
-    b_continue := new LAButton(32, 694, 'rect_menu_wide.png', 'rect_menu_wide_click.png');
+    b_continue := new Button(32, 694, 'rect_menu_wide.png', 'rect_menu_wide_click.png');
     b_continue.Text := 'ПРОДОЛЖИТЬ'; 
+    if loader.GetValue&<string>('$.current_level') = '' then b_continue.Active := False;
     
-    b_startNew := new LAButton(345, 694, 'rect_menu_wide.png', 'rect_menu_wide_click.png');
+    b_startNew := new Button(345, 694, 'rect_menu_wide.png', 'rect_menu_wide_click.png');
     b_startNew.Text := 'НОВАЯ ИГРА';
     
-    b_rules := new LAButton(656, 694, 'rect_menu_short.png', 'rect_menu_short_click.png');
+    b_rules := new Button(656, 694, 'rect_menu_short.png', 'rect_menu_short_click.png');
     b_rules.Text := 'ПРАВИЛА';
    
-    b_about := new LAButton(864, 694, 'rect_menu_short.png', 'rect_menu_short_click.png');
+    b_about := new Button(864, 694, 'rect_menu_short.png', 'rect_menu_short_click.png');
     b_about.Text := 'О ПРОЕКТЕ';
 
     ///Завершает работу игры.
-    b_exit := new LAButton(1072, 694, 'rect_menu_short.png', 'rect_menu_short_click.png');
+    b_exit := new Button(1072, 694, 'rect_menu_short.png', 'rect_menu_short_click.png');
     b_exit.Text := 'ВЫХОД';
     
     //Делегат, при вызове удаляет кнопки
@@ -1275,17 +1264,17 @@ type
       //Загружаем прогресс игрока
       ChangeLevel(loader.GetValue&<string>('$.current_level'));
       delButtons();
-      LAGD.BgPic.Visible := False;
+      GD.BgPic.Visible := False;
     end;
     
     b_startNew.OnClick += procedure() -> begin
       //Сбрасываем прогресс игрока
-      DrawConfirmMenu('ВЫ УВЕРЕНЫ?', 
+      DrawConfirmMenu('НАЧАТЬ НОВУЮ ИГРУ?', 
       procedure() -> begin
         loader.SetValue('$.current_level', 'Level_0');
         loader.SaveFile();
         ChangeLevel(loader.GetValue&<string>('$.current_level'));
-        LAGD.BgPic.Visible := False;
+        GD.BgPic.Visible := False;
       end, 
       procedure() ->DrawMainMenu());
       delButtons();
@@ -1302,9 +1291,9 @@ type
     Window.IsFixedSize := True; Window.SetSize(1296, 768);
     Window.CenterOnScreen();
 
-    LAGD.BgPic := new PictureWPF(0,0, 'img\MainMenuField1.png');   
-    if (LAGD.TransPic = nil) then LAGD.TransPic := new TransitionPic();
-    if (LAGD.DialogHandler = nil) then LAGD.DialogHandler := new DialogHandler();
+    GD.BgPic := new PictureWPF(0,0, 'img\MainMenuField1.png');   
+    if (GD.TransPic = nil) then GD.TransPic := new TransitionPic();
+    if (GD.DialogHandler = nil) then GD.DialogHandler := new DialogHandler();
     DrawMainMenu();
   end;
 end.
