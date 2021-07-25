@@ -1,7 +1,6 @@
 ﻿unit LAEngine;
 {$reference Newtonsoft.Json.dll}
-uses Newtonsoft.Json.Linq;
-uses WPFObjects, Timers, Loader;
+uses Newtonsoft.Json.Linq, WPFObjects, Timers, Loader;
 
 //Вспомогательные методы для работы с объектами
 ///Проверяет - принадлежит ли точка прямоугольнику объекта
@@ -13,9 +12,7 @@ end;
 
 ///Меняет изображение from на изображение из файла по пути too.
 procedure ChangePicture(var from:PictureWPF; too:string);
-begin
-  var p := from; from := new PictureWPF(p.LeftTop, too); p.Destroy();
-end;
+begin var p := from; from := new PictureWPF(p.LeftTop, too); p.Destroy(); end;
 
 function ApplyFontSettings(const obj:ObjectWPF):ObjectWPF;
 begin
@@ -83,7 +80,7 @@ type
     begin
       if (pic = nil) then exit;
       if (mousebutton <> 1) and (isClicked) then exit;
-      if PtInside(x,y,pic) then begin
+      if PtInside(x,y,pic) then begin 
         isClicked := True;
         ChangePicture(pic, clickPic); ApplyText();
       end;
@@ -93,8 +90,7 @@ type
     procedure Process(x, y: real; mousebutton: integer);
     begin
       if (pic = nil) then exit;
-      ChangePicture(pic, idlePic);
-      ApplyText();
+      ChangePicture(pic, idlePic); ApplyText();
       if (mousebutton <> 0) then exit;
       if (OnClick <> nil) and PtInside(x,y,pic) and (isClicked) then OnClick();
       isClicked := False;
@@ -170,18 +166,10 @@ type
     begin
       if (frameNum<curAnim.frames.Length-1) then frameNum+=1
       else if curAnim.isLoop then frameNum:=0
-      else begin 
-        updater.Stop(); 
+      else begin updater.Stop(); 
         if (curAnim.AnimProcedure<>nil) then curAnim.AnimProcedure;
         exit;
-      end;
-      ChangeSprite();
-    end;
-    
-    function GetPos():Point;
-    begin
-      if (sprite <> nil) then Result := sprite.Center
-      else Result := position;
+      end; ChangeSprite();
     end;
     
     ///Устанавливает позицию спрайта
@@ -190,11 +178,6 @@ type
       position := pos;
       pos.X += 24;
       sprite.Center := pos;
-    end;
-    
-    function GetFrameCount():integer;
-    begin
-       Result:= curAnim.frames.Length;
     end;
 
     public
@@ -233,28 +216,20 @@ type
     ///Проигрывает анимацию с именем aname
     procedure PlayAnim(aname:string);
     begin
-      curAnim := anims[aname];
+      curAnim := anims[aname]; frameNum := 0;
       if (updater.Enabled) then updater.Stop();
-      frameNum := 0;
       if (curAnim.frames.Length>1) then begin
         updater.Interval := curAnim.speed;
         updater.Start();
-      end;
-      ChangeSprite();
+      end; ChangeSprite();
     end;
     
     ///Уничтожаем спрайт.
     procedure Destroy();
     begin
-      updater.Stop();
-      sprite.Destroy();
-      sprite := nil;
+      updater.Stop(); sprite.Destroy(); sprite := nil;
     end;
     
-    ///Устанавливает позицию спрайта
-    property Pos: Point Read GetPos write SetPos;
-    ///Количество фреймов текущей анимации
-    property CurrentFrameCount: Integer Read GetFrameCount;
     ///Видимость спрайта
     property Visible: boolean write isVisible read isVisible;
     property Width: integer read floor(sprite.Width);
@@ -276,11 +251,11 @@ type
   //##############-КОНЕЦ_СПРАЙТЫ-################
   
   type
-  pp = procedure;
+  delegate = procedure;
   //ОПИСАНИЕ ИНТЕРФЕЙСНОЙ ЧАСТИ
   ITransitionPic = interface
-    procedure Show( p:pp:=nil; delay:integer:=-1);
-    procedure Show(message:string; delay:integer:=-1; p:pp:=nil);
+    procedure Show( p:delegate:=nil; delay:integer:=-1);
+    procedure Show(message:string; delay:integer:=-1; p:delegate:=nil);
     procedure Hide();
     procedure ToFront();
     property CanHide:boolean read;
@@ -296,8 +271,8 @@ type
     procedure MoveOn(x,y:integer; dir:string);
     procedure UseGrid();
     procedure Destroy();
-    property OnMoveEvent:pp read write;
-    property OnEnterBattleEvent: pp read write;
+    property OnMoveEvent:delegate read write;
+    property OnEnterBattleEvent: delegate read write;
     property GetX: integer read;
     property GetY: integer read;
     property isBlocked: boolean read write;
@@ -350,7 +325,7 @@ type
     property GetHP: integer Read;
     property GetMaxHP: integer Read;
     property GetDamage: integer Read;
-    property SetArmor: integer Read Write;
+    property SetGetArmor: integer Read Write;
   end;
   
   //КОНЕЦ ОПИСАНИЯ ИНТЕРФЕЙСНОЙ ЧАСТИ
@@ -502,6 +477,7 @@ type
       PlayerHPPanel := new PictureWPF(167, 572, 'img\ui\hp_bar.png');
       PlayerArmorPanel := new PictureWPF(936, 572, 'img\ui\rect_battle_mini.png');
       PlayerDamagePanel := new PictureWPF(1041, 572, 'img\ui\rect_battle_mini.png');
+
       var icon := new PictureWPF(0,0,'img\ui\icon_hp.png');
       PlayerHPPanel.AddChild(icon, Alignment.LeftTop);
       PlayerHPPanel := ApplyFontSettings(PlayerHPPanel) as PictureWPF;
@@ -510,7 +486,7 @@ type
       icon := new PictureWPF(0,0,'img\ui\icon_armor.png');
       PlayerArmorPanel.AddChild(icon, Alignment.LeftTop);
       PlayerArmorPanel := ApplyFontSettings(PlayerArmorPanel) as PictureWPF;
-      PlayerArmorPanel.Text := PlayerBattle.SetArmor.ToString();
+      PlayerArmorPanel.Text := PlayerBattle.SetGetArmor.ToString();
 
       icon := new PictureWPF(0,0,'img\ui\icon_damage.png');
       PlayerDamagePanel.AddChild(icon, Alignment.LeftTop);
@@ -625,20 +601,12 @@ type
     constructor Create(x, y:integer);
     begin
       inherited Create(x,y);
-      name := 'СКЕЛЕТОН';
-      hp:= 9;
-      attackDmg:=25;
-      agility:=3;
-      Delay:= 2000;
+      (name, hp, attackDmg, agility, Delay) := ('СКЕЛЕТОН', 9, 25, 3, 2000);
       Sprite:= new LSprite(x,y,'Idle',LoadSprites('enemy\Skeleton_Seeker\idle', 6));
       Sprite.AddAnim('Hit', LoadSprites('enemy\Skeleton_Seeker\hit', 4), 160, False, procedure()->
-      begin
-        sprite.PlayAnim('Idle'); 
-      end);
+        Sprite.PlayAnim('Idle'));
       Sprite.AddAnim('Attack', LoadSprites('enemy\Skeleton_Seeker\attack', 10), 160, False, procedure()->
-      begin
-      sprite.PlayAnim('Idle'); 
-      end);
+      sprite.PlayAnim('Idle'));
       Sprite.AddAnim('Death', LoadSprites('enemy\Skeleton_Seeker\death', 5), 160, False);
       Sprite.PlayAnim('Idle');
       CreateCircleShadowPics(40);
@@ -650,19 +618,12 @@ type
     constructor Create(x, y:integer);
     begin
       inherited Create(x,y);
-      name := 'ДРЕВО';
-      attackDmg:=4;
-      agility:=2;
-      hp:=15;
-      Delay:= 2000;
+      (name, hp, attackDmg, agility, Delay) := ('ДРЕВО', 15, 4, 2, 2000);
       Sprite:= new LSprite(x,y,'Idle',LoadSprites('enemy\Sprout\idle', 4));
       Sprite.AddAnim('Hit', LoadSprites('enemy\Sprout\hit', 5), 160, False, procedure()->
-      begin
-        sprite.PlayAnim('Idle'); 
-      end);
-      Sprite.AddAnim('Attack', LoadSprites('enemy\Sprout\attack', 6), 160, False, procedure()->begin
-        Sprite.PlayAnim('Idle'); 
-      end);
+        Sprite.PlayAnim('Idle'));
+      Sprite.AddAnim('Attack', LoadSprites('enemy\Sprout\attack', 6), 160, False, procedure()->
+        Sprite.PlayAnim('Idle'));
       Sprite.AddAnim('Death', LoadSprites('enemy\Sprout\death', 8), 160, False);
       Sprite.PlayAnim('Idle');
       CreateCircleShadowPics(45);
@@ -674,21 +635,14 @@ type
     constructor Create(x, y:integer);
     begin
       inherited Create(x,y);
-      name := 'ГОЛЕМ <БОСС>';
-      attackDmg:=10;
-      agility:=8;
-      hp:=30;
-      Delay:= 2000;
+      (name, hp, attackDmg, agility, Delay) := ('ГОЛЕМ <БОСС>', 30, 10, 8, 2000);
       Sprite:= new LSprite(x, y, 'Idle', LoadSprites('enemy\Golem\idle', 6));
       Sprite.AddAnim('Hit', LoadSprites('enemy\Golem\hit', 4), 160, False, procedure()->
-      begin
-        sprite.PlayAnim('Idle');
-      end);
-      Sprite.AddAnim('Attack', LoadSprites('enemy\Golem\attack', 8), 160, False, procedure()->begin
-        Sprite.PlayAnim('Idle');
-      end);
+        sprite.PlayAnim('Idle'));
+      Sprite.AddAnim('Attack', LoadSprites('enemy\Golem\attack', 8), 160, False, procedure()->
+        Sprite.PlayAnim('Idle'));
       Sprite.AddAnim('Death', LoadSprites('enemy\Golem\death', 10), 160, False);
-      Sprite.PlayAnim('Idle');
+      Sprite.PlayAnim('Idle'); //Включаем как анимацию по умолчанию
       CreateCircleShadowPics(45);
     end;
     end;
@@ -698,16 +652,15 @@ type
     max_hp, armor:integer; //Максимальное здоровье игрока
     procedure Death();
     begin
-      Writeln('Игрок проиграл');
-      BattleProcessor.EndBattle('Lose');
+      Writeln('Игрок проиграл'); BattleProcessor.EndBattle('Lose');
     end;
     public
     constructor Create();
     begin
       var loader := new LALoader('data/userdata.json');
-      //loader.GetValue&<integer>('$.hp');
       max_hp:= 20;
-      hp:= max_hp;
+      hp:= loader.GetValue&<integer>('$.hp');
+      armor:= loader.GetValue&<integer>('$.armor');
       attackDmg:= 8;
       agility:= 5;
       Delay:= 250;
@@ -740,7 +693,7 @@ type
     property GetHP: integer Read hp;
     property GetMaxHP: integer Read max_hp;
     property GetDamage: integer Read attackDmg;
-    property SetArmor: integer Read armor Write armor;
+    property SetGetArmor: integer Read armor Write armor;
     end;
   
   
@@ -966,7 +919,7 @@ type
     procedure Pickup(); override;
     begin
       inherited Pickup();
-      BattleProcessor.PlayerBattle.SetArmor := armorValue;
+      BattleProcessor.PlayerBattle.SetGetArmor := armorValue;
       var messages:array of string := ( $'Вы надели броню поглощающую {armorValue} ед. урона.');
       LAGD.DialogHandler.StartDialog(messages);
     end;
@@ -988,7 +941,7 @@ type
     moveTimer, updateSprite:Timer;
     dir:string;
     isUsing, blocked:boolean;
-    MoveEvent, InBattleEvent:pp;
+    MoveEvent, InBattleEvent:delegate;
 
     procedure Blocking(blocked:boolean);
     begin
@@ -1127,8 +1080,8 @@ type
     end;
     
     ///Событие окончания движения игрока
-    property OnMoveEvent: pp read MoveEvent write MoveEvent;
-    property OnEnterBattleEvent: pp read InBattleEvent write InBattleEvent;
+    property OnMoveEvent: delegate read MoveEvent write MoveEvent;
+    property OnEnterBattleEvent: delegate read InBattleEvent write InBattleEvent;
     property GetX: integer read position.x;
     property GetY: integer read position.y;
     property isBlocked: boolean read blocked write Blocking;
@@ -1139,29 +1092,22 @@ type
     private
     pic:RectangleWPF;
     isCanHide:boolean;
-    proc:pp;
+    proc:delegate;
     public
     constructor Create;
     begin
       Redraw(procedure()-> begin
         pic := new RectangleWPF(0, 0, 1296, 768, Colors.Black);
-        pic.FontName := 'GranaPadano';
-        pic.FontColor := Colors.White;
-        pic.FontSize := 32;
-        pic.TextAlignment := Alignment.Center;
-        pic.Visible := False;
+        pic := ApplyFontSettings(pic) as RectangleWPF; pic.Visible := False;
       end);
       OnDrawFrame += procedure(dt:real) -> LAGD.TransPic.ToFront();
     end;
     
     ///Показать изображение перехода
-    procedure Show(p:pp:=nil; delay:integer:=-1);
-    begin
-      Show('Для продолжения нажмите SPACE', delay, p);
-    end;
+    procedure Show(p:delegate:=nil; delay:integer:=-1) := Show('Для продолжения нажмите ПРОБЕЛ', delay, p);
     
     ///Показать изображение перехода с нужным текстом после загрузки
-    procedure Show(message:string; delay:integer:=-1; p:pp:=nil);
+    procedure Show(message:string; delay:integer:=-1; p:delegate:=nil);
     begin
       proc:=p;
       var t:Timer;
@@ -1170,25 +1116,19 @@ type
       
       if (delay <> -1) then begin
         Redraw(procedure()-> begin
-          pic.Visible := True;
-          pic.Text := message;
+          pic.Visible := True; pic.Text := message;
         end);
         t := new Timer(delay, procedure() -> begin
-          Hide();
-          t.Stop();
-        end);
-        t.Start(); exit;
+          Hide(); t.Stop();
+        end); t.Start(); exit;
       end;
       
       Redraw(procedure()-> begin
-        pic.Visible := True;
-        pic.Text := 'Загрузка уровня...';
+        pic.Visible := True; pic.Text := 'Загрузка уровня...';
       end);
 
       t := new Timer(1000, procedure() -> begin
-        isCanHide := True;
-        pic.Text := message;
-        t.Stop();
+        isCanHide := True; pic.Text := message; t.Stop();
       end); t.Start();
     end;
     
@@ -1196,8 +1136,7 @@ type
     procedure Hide();
     begin
       if (proc<>nil) then proc;
-      isCanHide := False;
-      pic.Visible := False;
+      isCanHide := False; pic.Visible := False;
     end;
     
     procedure ToFront();
@@ -1234,9 +1173,7 @@ type
           if (vval[1]['__value'].ToString() = 'False') then cell.CantGet := True;
           cell.GridObject := new MessageCell(vval[0]['__value'].ToObject&<array of string>());
         end;
-        'NextLevel': begin
-          cell.GridObject := new NextLevelCell(val[j]['fieldInstances'][0]['__value'].ToString());
-        end;
+        'NextLevel': cell.GridObject := new NextLevelCell(val[j]['fieldInstances'][0]['__value'].ToString());
         'EnemyPoint': begin
           var tt:= val[j]['fieldInstances'][0]['__value'].ToObject&<array of string>();
           cell.GridObject := new BattleCell(x,y,tt);
@@ -1275,8 +1212,10 @@ type
     //Сохраняем прогресс игрока
     var loader := new LALoader('data/userdata.json');
     loader.SetValue('$.current_level', lname);
-    if (BattleProcessor.PlayerBattle<> nil) then
+    if (BattleProcessor.PlayerBattle<> nil) then begin
       loader.SetValue('$.hp', BattleProcessor.PlayerBattle.GetHP);
+      loader.SetValue('$.armor', BattleProcessor.PlayerBattle.SetGetArmor);
+      end;
     loader.SaveFile();
     LoadLevel(lname);
   end;
