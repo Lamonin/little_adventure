@@ -331,6 +331,7 @@ type
     procedure Select();
     procedure Deselect();
     property GetName:string read;
+    property GetDeath: boolean Read;
     property GetCirclePic: PictureWPF read;
     property SetLockThis: boolean write;
   end;
@@ -390,8 +391,7 @@ type
       //Ходит игрок
       if ActionList[i] is IBattlePlayer then begin 
         isPlayerTurn:= True; 
-        TurnRect.Text := 'ВАШ ХОД';
-        i+=1; exit; 
+        TurnRect.Text := 'ВАШ ХОД'; i+=1; exit; 
       end;
       TurnRect.Text := 'ХОД ПРОТИВНИКА';
       ActionList[i].Attack(); i+=1;
@@ -423,8 +423,7 @@ type
         else if (Res = 'Lose') then begin //Иначе проиграл
           GD.TransPic.Show('ПОРАЖЕНИЕ', 1000, procedure() -> begin
             CloseLevel();
-            GD.Player.OnEnterBattleEvent := nil;
-            GD.Player.Destroy();
+            GD.Player.OnEnterBattleEvent := nil; GD.Player.Destroy();
             GD.Player := nil; GD.BgPic.Visible := True;
             BattleHandler.Player := nil;
             DrawMainMenu();
@@ -472,8 +471,7 @@ type
       EnemyPanel:= new PictureWPF(167, 616, 'img\ui\rect_panel_battle.png');
       EnemyPanel := ApplyFontSettings(EnemyPanel) as PictureWPF;
 
-      foreach var t in EnemyList do EnemyPanel.Text += t.GetName + '  |  ';
-      EnemyPanel.Text :=  Copy(EnemyPanel.Text, 1, EnemyPanel.Text.Length - 5);
+      
       
       HpPanel := new PictureWPF(167, 572, 'img\ui\hp_bar.png');
       ArmorPanel := new PictureWPF(936, 572, 'img\ui\rect_battle_mini.png');
@@ -498,6 +496,9 @@ type
       CombatTimer := new Timer(250, procedure() ->
       begin
         if (StopTimer) then exit;
+        EnemyPanel.Text := '';
+        foreach var t in EnemyList do begin if not t.GetDeath then EnemyPanel.Text += t.GetName + '  |  '; end;
+        EnemyPanel.Text :=  Copy(EnemyPanel.Text, 1, EnemyPanel.Text.Length - 5);
         if (enemyCount <= 0) then EndBattle('Win'); 
         var ActionList:= new List<IBattleEntity>();
         foreach var t in EnemyList do if t.AddAction() then ActionList.Add(t);                 
@@ -588,6 +589,7 @@ type
     
     property GetName: string read name;
     property GetCirclePic: PictureWPF read GetCircle;
+    property GetDeath: boolean Read isDeath;
     property SetLockThis: boolean write LockThis;
     end;
   
@@ -687,7 +689,6 @@ type
     property GetDamage: integer Read attackDmg;
     property SetGetArmor: integer Read armor Write armor;
     end;
-  
   
   DialogHandler = class(IDialogHandler)
     private
@@ -920,7 +921,7 @@ type
     useRect:PictureWPF;
     position:GPoint; sprite:LSprite;
     moveTimer, updateSprite:Timer;
-    dir:string; speed:integer := 200;
+    dir:string; speed:integer := 480;
     isUsing, blocked:boolean;
     MoveEvent, InBattleEvent:delegate;
 
@@ -972,10 +973,10 @@ type
       sprite.AddAnim('rotateup', LoadSprite('player/up2'), 100, False);
       sprite.AddAnim('rotatedown', LoadSprite('player/down2'), 100, False);
       
-      sprite.AddAnim('walkleft', LoadSprites('player/left', 4), 160, False);
-      sprite.AddAnim('walkright', LoadSprites('player/right', 4), 160, False);
-      sprite.AddAnim('walkup', LoadSprites('player/up', 4), 160, False);
-      sprite.AddAnim('walkdown', LoadSprites('player/down', 4), 160, False);
+      sprite.AddAnim('walkleft', LoadSprites('player/left', 4), 120, False);
+      sprite.AddAnim('walkright', LoadSprites('player/right', 4), 120, False);
+      sprite.AddAnim('walkup', LoadSprites('player/up', 4), 120, False);
+      sprite.AddAnim('walkdown', LoadSprites('player/down', 4), 120, False);
       
       sprite.PlayAnim('idledown');
       //*************************

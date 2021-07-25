@@ -1194,7 +1194,7 @@
 							"fieldInstances": [
 								{
 									"__identifier": "Messages",
-									"__value": [ "На табличке написано:", "Внизу безопасно.", "Честно." ],
+									"__value": [ "На табличке написано:", "\"Внизу безопасно.\"", "\"Честно!\"" ],
 									"__type": "Array<String>",
 									"defUid": 10,
 									"realEditorValues": [ {
@@ -1202,10 +1202,10 @@
 										"params": ["На табличке написано:"]
 									}, {
 										"id": "V_String",
-										"params": ["Внизу безопасно."]
+										"params": ["\"Внизу безопасно.\""]
 									}, {
 										"id": "V_String",
-										"params": ["Честно."]
+										"params": ["\"Честно!\""]
 									} ]
 								},
 								{ "__identifier": "CanGet", "__value": false, "__type": "Bool", "defUid": 11, "realEditorValues": [] }
@@ -6610,15 +6610,24 @@
 							"fieldInstances": [
 								{
 									"__identifier": "Messages",
-									"__value": ["Нужен ключ"],
+									"__value": ["Нужен ключ."],
 									"__type": "Array<String>",
 									"defUid": 10,
 									"realEditorValues": [{
 										"id": "V_String",
-										"params": ["Нужен ключ"]
+										"params": ["Нужен ключ."]
 									}]
 								},
-								{ "__identifier": "CanGet", "__value": false, "__type": "Bool", "defUid": 11, "realEditorValues": [] }
+								{
+									"__identifier": "CanGet",
+									"__value": true,
+									"__type": "Bool",
+									"defUid": 11,
+									"realEditorValues": [{
+										"id": "V_Bool",
+										"params": [ true ]
+									}]
+								}
 							]
 						},
 						{
