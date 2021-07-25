@@ -915,10 +915,9 @@ type
     private
     point:RectangleWPF; //Невидимое тело объекта
     useRect:PictureWPF;
-    position:GPoint;
-    sprite:LSprite;
+    position:GPoint; sprite:LSprite;
     moveTimer, updateSprite:Timer;
-    dir:string; speed:integer := 640;
+    dir:string; speed:integer := 200;
     isUsing, blocked:boolean;
     MoveEvent, InBattleEvent:delegate;
 
