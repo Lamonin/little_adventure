@@ -419,17 +419,14 @@ type
       DelayAction(1250, procedure() -> begin
         if (Res = 'Win') then //Игрок победил
         begin
-          GD.TransPic.Show('ПОБЕДА', 1000, procedure() -> begin 
-            GD.Player.isBlocked := False; 
-          end);
+          GD.TransPic.Show('ПОБЕДА', 1000, procedure() -> GD.Player.isBlocked := False);
         end
         else if (Res = 'Lose') then begin //Иначе проиграл
           GD.TransPic.Show('ПОРАЖЕНИЕ', 1000, procedure() -> begin
             CloseLevel();
             GD.Player.OnEnterBattleEvent := nil;
             GD.Player.Destroy();
-            GD.Player := nil;
-            GD.BgPic.Visible := True;
+            GD.Player := nil; GD.BgPic.Visible := True;
             BattleHandler.Player := nil;
             DrawMainMenu();
           end);
@@ -507,10 +504,7 @@ type
         foreach var t in EnemyList do if t.AddAction() then ActionList.Add(t);                 
         if Player.AddAction() then ActionList.Add(Player);
         if (ActionList.Count>0) then
-        begin       
-          Stoptimer:= True;
-          ProcessAttack(ActionList);
-        end;
+        begin Stoptimer:= True; ProcessAttack(ActionList); end;
         end);
       end;
   end;
@@ -525,9 +519,7 @@ type
     procedure klik(x, y: real; mb: integer);
     begin
       if (Sprite <> nil) and (mb=1) and (Sprite.PtInside(x,y)) and not (LockThis) then 
-      begin
-        Select();
-      end;
+      begin Select(); end;
     end;
 
     procedure Death();
@@ -601,7 +593,6 @@ type
     end;
   
   SkeletonEnemy = class(Enemy)
-    public
     constructor Create(x, y:integer);
     begin
       inherited Create(x,y);
@@ -618,7 +609,6 @@ type
     end;
   
   TreeEnemy = class(Enemy)
-    public
     constructor Create(x, y:integer);
     begin
       inherited Create(x,y);
@@ -635,7 +625,6 @@ type
     end;
   
   GolemEnemy = class(Enemy)
-    public
     constructor Create(x, y:integer);
     begin
       inherited Create(x,y);
@@ -772,14 +761,10 @@ type
     messages : array of string;
     public
     constructor Create(messages:array of string);
-    begin
-      self.messages := messages;
-    end;
+    begin self.messages := messages; end;
 
-    procedure Use(); override;
-    begin
-      if (GD.DialogHandler <> nil) then 
-        GD.DialogHandler.StartDialog(messages);
+    procedure Use(); override; begin
+      if (GD.DialogHandler <> nil) then GD.DialogHandler.StartDialog(messages);
     end;
     end;
   
@@ -824,8 +809,7 @@ type
         'Skeleton': E:= new SkeletonEnemy(X,Y);
         'TreeEnemy': E:= new TreeEnemy(X,Y);
         'Golem': E:= new GolemEnemy(X,Y);
-      end;
-      BattleHandler.EnemyList.Add(E);
+      end; BattleHandler.EnemyList.Add(E);
     end;
 
     public
@@ -1182,7 +1166,7 @@ type
     //Сохраняем прогресс игрока
     var loader := new LALoader('data/userdata.json');
     loader.SetValue('$.current_level', lname);
-    if (BattleHandler.Player<> nil) then begin
+    if (BattleHandler.Player <> nil) then begin
       loader.SetValue('$.hp', BattleHandler.Player.GetHP);
       loader.SetValue('$.armor', BattleHandler.Player.SetGetArmor);
       end;
