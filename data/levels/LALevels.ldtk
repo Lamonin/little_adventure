@@ -1585,6 +1585,26 @@
 							"defUid": 3,
 							"px": [96,336],
 							"fieldInstances": []
+						},
+						{
+							"__identifier": "EnemyPoint",
+							"__grid": [9,3],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 18,
+							"px": [432,144],
+							"fieldInstances": [{
+								"__identifier": "Enemys",
+								"__value": ["Skeleton"],
+								"__type": "Array<LocalEnum.EnemyType>",
+								"defUid": 21,
+								"realEditorValues": [{
+									"id": "V_String",
+									"params": ["Skeleton"]
+								}]
+							}]
 						}
 					]
 				},

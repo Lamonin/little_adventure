@@ -2,7 +2,15 @@
 {$reference Newtonsoft.Json.dll}
 uses Newtonsoft.Json.Linq, WPFObjects, Timers, Loader;
 
-//Вспомогательные методы для работы с объектами
+//Вспомогательные методы для работы
+type
+  delegate = procedure;
+///Выполняет действие p с через время delay
+procedure DelayAction(delay:integer; const p:delegate);
+begin
+  var t : Timer; t := new Timer(delay, procedure -> begin p(); t.Stop();
+  end); t.Start();
+end;
 ///Проверяет - принадлежит ли точка прямоугольнику объекта
 function PtInside(x,y:real; obj:ObjectWPF):boolean;
 begin
@@ -16,8 +24,8 @@ begin var p := from; from := new PictureWPF(p.LeftTop, too); p.Destroy(); end;
 
 function ApplyFontSettings(const obj:ObjectWPF):ObjectWPF;
 begin
-  obj.FontName := 'GranaPadano'; obj.FontColor := ARGB(255, 255, 214, 0);
-  obj.FontSize := 32; obj.TextAlignment := Alignment.Center; Result := obj;
+  (obj.FontName, obj.FontColor, obj.FontSize, obj.TextAlignment) := 
+  ('GranaPadano', ARGB(255, 255, 214, 0), 32, Alignment.Center); Result := obj;
 end;
 //---------------------------------------------
 
@@ -72,13 +80,13 @@ type
   ///b.OnClick += procedure() -> begin КОД КОТОРЫЙ ВЫПОЛНИТСЯ ПРИ НАЖАТИИ КНОПКИ end;
   LAButton = class
     private
-    pic:PictureWPF; isClicked:boolean;
+    pic:PictureWPF; isClicked, isActive:boolean;
     idlePic, clickPic, buttonText:string;
     
     ///Изменение спрайта на clickPic
     procedure Clicked(x, y: real; mousebutton: integer);
     begin
-      if (pic = nil) then exit;
+      if (pic = nil) or not isActive then exit;
       if (mousebutton <> 1) and (isClicked) then exit;
       if PtInside(x,y,pic) then begin 
         isClicked := True;
@@ -89,7 +97,7 @@ type
     ///Обработка нажатия
     procedure Process(x, y: real; mousebutton: integer);
     begin
-      if (pic = nil) then exit;
+      if (pic = nil) or not isActive then exit;
       ChangePicture(pic, idlePic); ApplyText();
       if (mousebutton <> 0) then exit;
       if (OnClick <> nil) and PtInside(x,y,pic) and (isClicked) then OnClick();
@@ -115,6 +123,7 @@ type
     ///И с изображением по нажатию clickPic.
     constructor Create(x,y:integer; idlePic, clickPic:string);
     begin
+      isActive := True;
       self.idlePic := 'img\ui\' + idlePic;
       self.clickPic := 'img\ui\' + clickPic;
       
@@ -130,6 +139,7 @@ type
     end;
     
     property Text: string read buttonText write SetText;
+    property Active: boolean read isActive write isActive;
   end;
   //##############-КОНЕЦ_ИНТЕРФЕЙС-#################
   
@@ -171,6 +181,12 @@ type
         exit;
       end; ChangeSprite();
     end;
+
+    function GetPos():Point;
+    begin
+      if (sprite <> nil) then Result := sprite.Center
+      else Result := position;
+    end;
     
     ///Устанавливает позицию спрайта
     procedure SetPos(pos:Point);
@@ -200,10 +216,8 @@ type
     end;
    
     ///Принадлежит ли точка спрайту
-    function PtInside(x,y:Real):boolean;
-    begin
-      result := LAEngine.PtInside(X,Y,sprite);
-    end;
+    function PtInside(x,y:Real):boolean; begin
+    result := LAEngine.PtInside(X,Y,sprite); end;
     
     ///Добавляет новую анимацию с именем aname
     procedure AddAnim(aname:string; frames:array of string; speed:integer; looped:boolean; AnimProcedure:procedure:=nil);
@@ -231,6 +245,7 @@ type
     end;
     
     ///Видимость спрайта
+    property Pos: Point Read GetPos write SetPos;
     property Visible: boolean write isVisible read isVisible;
     property Width: integer read floor(sprite.Width);
     property Height: integer read floor(sprite.Height);
@@ -249,9 +264,8 @@ type
     for var i:= 0 to count-1 do Result[i] := 'img/'+sname+(i+1)+'.png';
   end;
   //##############-КОНЕЦ_СПРАЙТЫ-################
-  
+
   type
-  delegate = procedure;
   //ОПИСАНИЕ ИНТЕРФЕЙСНОЙ ЧАСТИ
   ITransitionPic = interface
     procedure Show( p:delegate:=nil; delay:integer:=-1);
@@ -277,7 +291,6 @@ type
     property GetY: integer read;
     property isBlocked: boolean read write;
     property SetUsing: boolean write;
-
   end;
 
   IDialogHandler = interface
@@ -399,14 +412,13 @@ type
 
     static procedure EndBattle(Res:string);
     begin
+      b_attack.isActive := false; b_run.isActive := false;
       CombatTimer.Stop(); ProcessTimer.Stop(); Stoptimer := False; PlayerStep := False;
       if (Res <> 'Run') then begin
         LAGD.Grid[LAGD.Player.GetY, LAGD.Player.GetX].GridObject.Destroy();
         LAGD.Grid[LAGD.Player.GetY, LAGD.Player.GetX].GridObject := nil;
       end;
-      var t:Timer;
-      //Таймер выступает в роли задержки перед выходом из боя
-      t := new Timer(1250, procedure() -> begin
+      DelayAction(1250, procedure() -> begin
         if (Res = 'Win') then //Игрок победил
         begin
           LAGD.TransPic.Show('ПОБЕДА', 1000, procedure() -> begin 
@@ -440,9 +452,7 @@ type
         OnBattleEndEvent := nil; SelectedEnemy := nil; enemyCount := 0;
 
         LAGD.CombatPic.Destroy();
-        t.Stop();
       end);
-      t.Start();
     end;
 
     static procedure StartBattle();
@@ -461,7 +471,8 @@ type
       b_run:= new LAButton(656, 692, 'rect_button_battle.png', 'rect_button_battle_click.png');
       b_run.Text := 'ПОБЕГ';
       b_run.OnClick += procedure() -> begin
-        BattleProcessor.EndBattle('Run')
+        b_run.isActive := False;
+        BattleProcessor.EndBattle('Run');
       end;
       
       TurnRect := new PictureWPF(327, 572, 'img\ui\rect_battle_turn.png');
@@ -601,13 +612,13 @@ type
     constructor Create(x, y:integer);
     begin
       inherited Create(x,y);
-      (name, hp, attackDmg, agility, Delay) := ('СКЕЛЕТОН', 9, 25, 3, 2000);
-      Sprite:= new LSprite(x,y,'Idle',LoadSprites('enemy\Skeleton_Seeker\idle', 6));
-      Sprite.AddAnim('Hit', LoadSprites('enemy\Skeleton_Seeker\hit', 4), 160, False, procedure()->
+      (name, hp, attackDmg, agility, Delay) := ('СКЕЛЕТОН', 9, 5, 3, 2000);
+      Sprite:= new LSprite(x,y,'Idle',LoadSprites('enemy\Skeleton\idle', 6));
+      Sprite.AddAnim('Hit', LoadSprites('enemy\Skeleton\hit', 4), 160, False, procedure()->
         Sprite.PlayAnim('Idle'));
-      Sprite.AddAnim('Attack', LoadSprites('enemy\Skeleton_Seeker\attack', 10), 160, False, procedure()->
+      Sprite.AddAnim('Attack', LoadSprites('enemy\Skeleton\attack', 10), 160, False, procedure()->
       sprite.PlayAnim('Idle'));
-      Sprite.AddAnim('Death', LoadSprites('enemy\Skeleton_Seeker\death', 5), 160, False);
+      Sprite.AddAnim('Death', LoadSprites('enemy\Skeleton\death', 5), 160, False);
       Sprite.PlayAnim('Idle');
       CreateCircleShadowPics(40);
     end;
@@ -797,11 +808,9 @@ type
       if (distance < 2) then ePointAnim.Visible := True else ePointAnim.Visible := False;
       
       if (LAGD.Player.GetX <> x) or (LAGD.Player.GetY <> y) then exit;
-      
+      DelayAction(500, procedure -> LAGD.Player.OnEnterBattleEvent);
       //Начинаем бой, если игрок стоит на точке начала боя.
-      LAGD.TransPic.Show('Начало боя', 1000, procedure -> begin 
-        BattleProcessor.CombatTimer.Start; 
-        LAGD.Player.OnEnterBattleEvent; end);
+      LAGD.TransPic.Show('Начало боя', 1000, procedure -> BattleProcessor.CombatTimer.Start);
       LAGD.Player.isBlocked := True; //Блокируем управление игроком
       LAGD.CombatPic := new PictureWPF(0, 0,'data\levels\LALevels\png\CombatField.png');
 
@@ -870,8 +879,7 @@ type
         var messages:array of string := ('За моей спиной остались противники, я не могу быть небрежным!');
         LAGD.DialogHandler.StartDialog(messages);
       end
-      else
-        ChangeLevel(levelName);
+      else ChangeLevel(levelName);
     end;
     end;
   
@@ -933,10 +941,9 @@ type
   ///Класс игрока в "мире".
   PlayerWorld = class (IPlayerWorld)
     private
-    
     point:RectangleWPF; //Невидимое тело объекта
     useRect:PictureWPF;
-    position:record x,y:integer end;
+    position:GPoint;
     sprite:LSprite;
     moveTimer, updateSprite:Timer;
     dir:string;
@@ -947,8 +954,7 @@ type
     begin
       self.blocked := blocked;
       sprite.Visible := not blocked;
-      if not blocked then
-        sprite.PlayAnim('rotatedown');
+      if not blocked then sprite.PlayAnim('rotatedown');
     end;
     
     //Проверяет можно ли использовать клетку на которую смотрит персонаж,
@@ -963,10 +969,8 @@ type
       
       var dx := 0; var dy := 0;
       case self.dir of 
-        'left': dx := -1;
-        'right': dx := 1;
-        'up': dy := -1;
-        'down': dy := 1;
+        'left': dx := -1;'right': dx := 1;
+        'up': dy := -1;'down': dy := 1;
       end;
 
       if (GetX+dx<0) or (GetX+dx>26) or (GetY+dy<0) or (GetY+dy>15) then exit;
@@ -983,11 +987,8 @@ type
       point := new RectangleWPF(x*48, y*48, 4, 4, Colors.Black);
       point.Visible := False;
       useRect := new PictureWPF(x*48+12, y*48, 'img\ui\rect_small.png');
-      useRect.TextAlignment := Alignment.Center;
-      useRect.FontColor := Colors.Yellow;
-      useRect.FontSize := 18;
-      useRect.FontName := 'GranaPadano'; useRect.Text := 'E';
-      useRect.Visible := False;
+      useRect := ApplyFontSettings(useRect) as PictureWPF;
+      (useRect.FontSize, useRect.Text, useRect.Visible) := (18, 'E', False);
       
       //Инициализация изображений игрока
       sprite := new LSprite(x, y, 'idledown', LoadSprite('player/down2'), 160, False);
@@ -1004,12 +1005,11 @@ type
       
       sprite.PlayAnim('idledown');
       //*************************
-      
+      //Таймер нужен чтобы игрок не двигался с бесконечным ускорением
+      moveTimer := new Timer(200, procedure -> begin moveTimer.Stop(); MoveEvent; end);
       //Обновляем позицию визуального представления игрока
       updateSprite := new Timer(10, procedure() -> begin
-        var p := point.LeftTop;
-        p.Y += 12;
-        sprite.Pos := p;
+        var p := point.LeftTop; p.Y += 12; sprite.Pos := p;
         useRect.MoveTo(point.LeftTop.x+12, point.LeftTop.y-48);
       end);
       updateSprite.Start();
@@ -1018,17 +1018,15 @@ type
     ///Перемещает игрока в координаты x, y
     procedure SetPos(x,y:integer);
     begin
-      position.x := x; position.y := y;
+      (position.x, position.y) := (x, y);
       point.AnimMoveTo(x*48,y*48, 0);
       sprite.PlayAnim('idledown');
-      MoveEvent;
-      CheckGridUse();
+      MoveEvent(); CheckGridUse();
     end;
     
     procedure MoveOn(x,y:integer; dir:string);
     begin
-      if isUsing then exit;
-      self.dir := dir;
+      if isUsing then exit; self.dir := dir;
       //Не обрабатываем движение, если персонаж уже идёт
       if (moveTimer<>nil) and (moveTimer.Enabled) then exit;
       
@@ -1041,9 +1039,6 @@ type
         sprite.PlayAnim('walk'+dir);
         position.x += x; position.y += y;
         point.AnimMoveTo(GetX*48, GetY*48, 0.2);
-        
-        //Таймер нужен чтобы игрок не двигался с бесконечным ускорением
-        moveTimer := new Timer(200, procedure -> begin moveTimer.Stop(); MoveEvent; end);
         moveTimer.Start();
       end;
       CheckGridUse();   
@@ -1059,10 +1054,8 @@ type
       
       var dx := 0; var dy := 0;
       case self.dir of
-        'left': dx := -1;
-        'right': dx := 1;
-        'up': dy := -1;
-        'down': dy := 1;
+        'left': dx := -1; 'right': dx := 1;
+        'up': dy := -1; 'down': dy := 1;
       end;
       //Если взаимодействуем с клеткой за границей экрана, то просто выходим.
       if (GetX+dx<0) or (GetX+dx>26) or (GetY+dy<0) or (GetY+dy>15) then exit;
@@ -1074,16 +1067,14 @@ type
     procedure Destroy();
     begin
       moveTimer.Stop(); updateSprite.Stop();
-      point.Destroy();
-      useRect.Destroy();
-      sprite.Destroy();
+      point.Destroy(); useRect.Destroy(); sprite.Destroy();
     end;
     
     ///Событие окончания движения игрока
     property OnMoveEvent: delegate read MoveEvent write MoveEvent;
     property OnEnterBattleEvent: delegate read InBattleEvent write InBattleEvent;
-    property GetX: integer read position.x;
-    property GetY: integer read position.y;
+    property GetX: integer read floor(position.x);
+    property GetY: integer read floor(position.y);
     property isBlocked: boolean read blocked write Blocking;
     property SetUsing: boolean write isUsing;
   end;
@@ -1110,26 +1101,17 @@ type
     procedure Show(message:string; delay:integer:=-1; p:delegate:=nil);
     begin
       proc:=p;
-      var t:Timer;
-      if (LAGD.player <> nil) then
-        LAGD.player.isBlocked := True; //Блокируем движение игрока
+      if (LAGD.player <> nil) then LAGD.player.isBlocked := True; //Блокируем движение игрока
       
       if (delay <> -1) then begin
-        Redraw(procedure()-> begin
-          pic.Visible := True; pic.Text := message;
-        end);
-        t := new Timer(delay, procedure() -> begin
-          Hide(); t.Stop();
-        end); t.Start(); exit;
+        Redraw(procedure -> (pic.Visible, pic.Text) := (True, message));
+        DelayAction(delay, procedure -> Hide()); exit;
       end;
       
-      Redraw(procedure()-> begin
-        pic.Visible := True; pic.Text := 'Загрузка уровня...';
-      end);
+      Redraw(procedure -> (pic.Visible, pic.Text) := (True, 'Загрузка уровня...'));
 
-      t := new Timer(1000, procedure() -> begin
-        isCanHide := True; pic.Text := message; t.Stop();
-      end); t.Start();
+      DelayAction(1000, procedure -> begin
+        isCanHide := True; pic.Text := message; end);
     end;
     
     ///Скрыть изображение перехода
@@ -1285,11 +1267,8 @@ type
     
     //Делегат, при вызове удаляет кнопки
     var delButtons := procedure() -> begin
-      b_continue.Destroy(); 
-      b_startNew.Destroy();
-      b_rules.Destroy();
-      b_about.Destroy();
-      b_exit.Destroy();
+      b_continue.Destroy(); b_startNew.Destroy();
+      b_rules.Destroy(); b_about.Destroy(); b_exit.Destroy();
     end;
     
     b_continue.OnClick += procedure() -> begin
@@ -1308,9 +1287,7 @@ type
         ChangeLevel(loader.GetValue&<string>('$.current_level'));
         LAGD.BgPic.Visible := False;
       end, 
-      procedure() -> begin
-        DrawMainMenu();
-      end);
+      procedure() ->DrawMainMenu());
       delButtons();
     end;
     
@@ -1322,8 +1299,7 @@ type
   procedure StartGame();
   begin
     Window.Caption := 'Little Adventure';
-    Window.IsFixedSize := True;
-    Window.SetSize(1296, 768);
+    Window.IsFixedSize := True; Window.SetSize(1296, 768);
     Window.CenterOnScreen();
 
     LAGD.BgPic := new PictureWPF(0,0, 'img\MainMenuField1.png');   
