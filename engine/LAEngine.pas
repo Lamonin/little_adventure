@@ -18,8 +18,8 @@ begin
 end;
 
 ///Меняет изображение from на изображение из файла по пути too.
-procedure ChangePicture(var from:PictureWPF; too:string);
-begin var p := from; from := new PictureWPF(p.LeftTop, too); p.Destroy(); end;
+procedure ChangePicture(var from:PictureWPF; path:string);
+begin var p := from; from := new PictureWPF(p.LeftTop, path); p.Destroy(); end;
 
 function ApplyFontSettings(const obj:ObjectWPF):ObjectWPF;
 begin
@@ -417,9 +417,7 @@ type
       end;
       DelayAction(1250, procedure() -> begin
         if (Res = 'Win') then //Игрок победил
-        begin
-          GD.TransPic.Show('ПОБЕДА', 1000, procedure() -> GD.Player.isBlocked := False);
-        end
+          GD.TransPic.Show('ПОБЕДА', 1000, procedure() -> GD.Player.isBlocked := False)
         else if (Res = 'Lose') then begin //Иначе проиграл
           GD.TransPic.Show('ПОРАЖЕНИЕ', 1000, procedure() -> begin
             CloseLevel();
@@ -471,8 +469,6 @@ type
       EnemyPanel:= new PictureWPF(167, 616, 'img\ui\rect_panel_battle.png');
       EnemyPanel := ApplyFontSettings(EnemyPanel) as PictureWPF;
 
-      
-      
       HpPanel := new PictureWPF(167, 572, 'img\ui\hp_bar.png');
       ArmorPanel := new PictureWPF(936, 572, 'img\ui\rect_battle_mini.png');
       DamagePanel := new PictureWPF(1041, 572, 'img\ui\rect_battle_mini.png');
@@ -480,7 +476,7 @@ type
       var icon := new PictureWPF(0,0,'img\ui\icon_hp.png');
       HpPanel.AddChild(icon, Alignment.LeftTop);
       HpPanel := ApplyFontSettings(HpPanel) as PictureWPF;
-      BattleHandler.HpPanel.Text := Player.GetHP +'/'+Player.GetMaxHP;
+      HpPanel.Text := Player.GetHP +'/'+Player.GetMaxHP;
       
       icon := new PictureWPF(0,0,'img\ui\icon_armor.png');
       ArmorPanel.AddChild(icon, Alignment.LeftTop);
