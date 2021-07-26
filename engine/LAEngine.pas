@@ -2,7 +2,7 @@
 {$reference Newtonsoft.Json.dll}
 uses Newtonsoft.Json.Linq, WPFObjects, Timers, Loader;
 
-//Вспомогательные методы для работы
+//###Вспомогательные методы для работы
 type delegate = procedure;
 ///Выполняет действие p с через время delay
 procedure DelayAction(delay:integer; const p:delegate);
@@ -13,8 +13,7 @@ end;
 ///Проверяет - принадлежит ли точка прямоугольнику объекта
 function PtInside(x,y:real; obj:ObjectWPF):boolean;
 begin
-  if (x>obj.LeftTop.X) and (x<obj.RightTop.X) and (y>obj.LeftTop.Y) and (y<obj.RightBottom.Y) then
-  Result:=True;
+  Result:=(x>obj.LeftTop.X) and (x<obj.RightTop.X) and (y>obj.LeftTop.Y) and (y<obj.RightBottom.Y);
 end;
 
 ///Меняет изображение from на изображение из файла по пути too.
@@ -23,10 +22,10 @@ begin var p := from; from := new PictureWPF(p.LeftTop, path); p.Destroy(); end;
 
 function ApplyFontSettings(const obj:ObjectWPF):ObjectWPF;
 begin
-  (obj.FontName, obj.FontColor, obj.FontSize, obj.TextAlignment) := 
-  ('GranaPadano', ARGB(255, 255, 214, 0), 32, Alignment.Center); Result := obj;
+  (Result.FontName, Result.FontColor, Result.FontSize, Result.TextAlignment) := 
+  ('GranaPadano', ARGB(255, 255, 214, 0), 32, Alignment.Center);
 end;
-//---------------------------------------------
+//###---------------------------------------------
 
 //Опережающее описание процедур
 procedure CloseLevel(); forward;
@@ -215,7 +214,7 @@ type
       anims := new Dictionary<string, spriteInfo>();
       AddAnim(aname, frames, speed, looped);
       sprite := new PictureWPF(position, anims[aname].frames[0]);
-      updater := new Timer(100, UpdateFrame);
+      updater := new Timer(speed, UpdateFrame);
       SetPos(position);
     end;
    
@@ -248,8 +247,8 @@ type
       updater.Stop(); sprite.Destroy(); sprite := nil;
     end;
     
-    ///Видимость спрайта
     property Pos: Point Read GetPos write SetPos;
+		///Видимость спрайта
     property Visible: boolean write isVisible read isVisible;
     property Width: integer read floor(sprite.Width);
     property Height: integer read floor(sprite.Height);
@@ -270,14 +269,103 @@ type
   //##############-КОНЕЦ_СПРАЙТЫ-################
 
   type
-  //ОПИСАНИЕ ИНТЕРФЕЙСНОЙ ЧАСТИ
-  ITransitionPic = interface
-    procedure Show(delay:integer;p:delegate:=nil);
+	TransitionPic = class (TransitionPic)
+    private
+    pic:RectangleWPF;
+    proc:delegate;
+    public
+    constructor Create;
+    begin
+      Redraw(procedure()-> begin
+        pic := new RectangleWPF(0, 0, 1296, 768, Colors.Black);
+        pic := ApplyFontSettings(pic) as RectangleWPF; pic.Visible := False;
+      end);
+      OnDrawFrame += procedure(dt:real) -> GD.TransPic.ToFront();
+    end;
+    
+    ///Показать изображение перехода
+    procedure Show(delay:integer; p:delegate:=nil) := Show('Загрузка уровня...', delay, p);
+    
+    ///Показать изображение перехода с нужным текстом после загрузки
     procedure Show(message:string; delay:integer; p:delegate:=nil);
+    begin
+      proc:=p;
+      Redraw(procedure -> (pic.Visible, pic.Text) := (True, message));
+      DelayAction(delay, procedure -> Hide());
+    end;
+    
+    ///Скрыть изображение перехода
     procedure Hide();
+    begin
+      if (proc<>nil) then proc;
+      pic.Visible := False;
+    end;
+    
     procedure ToFront();
+    begin if (pic <> nil) then pic.ToFront(); end;
   end;
 
+	DialogHandler = class
+    private
+    messages : array of string;
+    messageNum, messageCount:integer; //Текущий номер сообщения и текущий символ сообщения
+    messageTimer:Timer;
+    dialogRect:PictureWPF;
+    isDialogue: boolean; //Идёт ли диалог
+    procedure EndDialogue();
+    begin
+      GD.Player.SetUsing := False;
+      dialogRect.Visible := False;
+      messageTimer.Stop();
+      isDialogue := False;
+    end;
+    public
+    constructor Create();
+    begin
+      if (dialogRect = nil) then Redraw(procedure() -> begin
+        dialogRect := new PictureWPF(0,768-128,'img\ui\rect_game_big.png');
+        dialogRect := ApplyFontSettings(dialogRect) as PictureWPF;
+        dialogRect.FontSize := 24;
+        dialogRect.Visible := False;
+      end);
+      messageTimer := new Timer(16, procedure() -> begin
+        dialogRect.Text += messages[messageNum][messageCount];
+        if (messageCount = messages[messageNum].Length) then
+          messageTimer.Stop();
+        messageCount += 1;
+      end);
+    end;
+
+    procedure StartDialog(messages:array of string);
+    begin
+      dialogRect.ToFront();
+      (messageNum, messageCount, self.messages, isDialogue) := (-1,1,messages, True);
+      dialogRect.Visible := True;
+      GD.Player.SetUsing := True;
+      NextMessage();
+    end;
+
+    function NextMessage():boolean;
+    begin
+      if not isDialogue then exit;
+      Result:=True; //Диалог может продолжаться
+      if (messageTimer.Enabled) then
+      begin
+        messageTimer.Stop(); dialogRect.Text := messages[messageNum]; exit;
+      end;
+      messageNum += 1;
+
+      //Если показали все сообщения, то закрываем окно диалога.
+      if (messageNum = messages.Length) then begin
+        EndDialogue(); exit;
+      end;
+      //Начинаем с первого символа сообщения и пустого текста в окне сообщений
+      messageCount := 1; dialogRect.Text := '';
+      messageTimer.Start();
+    end;
+  end;
+
+  //ОПИСАНИЕ ИНТЕРФЕЙСНОЙ ЧАСТИ
   IUseObject = interface
     procedure Use();
     procedure Destroy();
@@ -296,11 +384,6 @@ type
     property SetUsing: boolean write;
   end;
 
-  IDialogHandler = interface
-    procedure StartDialog(messages:array of string);
-    function NextMessage():boolean;
-  end;
-  
   levelGridRecord = record
     CantGet:boolean; //Можно ли ступить на клетку
     GridObject:IUseObject; //Объект на клетке
@@ -315,38 +398,12 @@ type
     static Player:IPlayerWorld; //Игрок в мире
     static Grid:levelGridArr; //Сетка уровня
     static LevelPic, CombatPic, BgPic:PictureWPF;
-    static TransPic:ITransitionPic; //Экран перехода
-    static DialogHandler:IDialogHandler;
+    static TransPic:TransitionPic; //Экран перехода
   end;
   
-  IBattleEntity = interface
-    procedure Destroy();
-    procedure Damage(Dmg: integer);
-    procedure Attack();
-    function AddAction():boolean;
-    property GetDelay: integer Read;
-  end;
-  
-  IEnemy = interface (IBattleEntity)
-    procedure Select();
-    procedure Deselect();
-    property GetName:string read;
-    property GetDeath: boolean Read;
-    property GetCirclePic: PictureWPF read;
-    property SetLockThis: boolean write;
-  end;
-  
-  IBattlePlayer = interface (IBattleEntity)
-    procedure AddHP(val:integer);
-    property GetHP: integer Read;
-    property GetMaxHP: integer Read;
-    property GetDamage: integer Read;
-    property SetGetArmor: integer Read Write;
-  end;
-  
-  //КОНЕЦ ОПИСАНИЯ ИНТЕРФЕЙСНОЙ ЧАСТИ
+   //КОНЕЦ ОПИСАНИЯ ИНТЕРФЕЙСНОЙ ЧАСТИ
 
-  BattleEntity = class (IBattleEntity)
+  BattleEntity = class
     private
     hp, attackDmg, agility, actionPoint, delay : integer;
     isDeath:boolean;
@@ -371,7 +428,189 @@ type
     property GetDelay: integer Read delay;
   end;
 
-  BattleHandler = class
+  
+  Enemy = class(BattleEntity)
+    private
+    name:string;
+    Sprite : LSprite;
+    LockThis, isDeath: boolean; //Выбран ли этот враг || Убит ли этот враг
+    CirclePic, ShadowPic: PictureWPF; //Круг выделения и тень
+    ///Нажатие на врага в бою
+    procedure klik(x, y: real; mb: integer);
+    begin
+      if (Sprite <> nil) and (mb=1) and (Sprite.PtInside(x,y)) and not (LockThis) then 
+      begin Select(); end;
+    end;
+
+    procedure Death();
+    begin
+      isDeath := True;
+      BattleHandler.enemyCount -= 1;
+      OnMouseDown -= klik;
+      Sprite.PlayAnim('Death');
+    end;
+    
+    function GetCircle():PictureWPF;
+    begin
+      if (CirclePic<>nil) then Result := CirclePic;
+    end;
+
+    public
+    constructor Create(x,y:integer);
+    begin
+      BattleHandler.OnBattleEndEvent += procedure -> Destroy();
+      BattleHandler.enemyCount += 1;
+      OnMouseDown += klik;
+    end;
+
+    procedure CreateCircleShadowPics(yOffset:integer);
+    begin
+      var sp := Sprite.Pos;
+      ShadowPic := new PictureWPF(sp.X-65, sp.Y+Sprite.Height/2-yOffset, 'img\enemy\shadow.png');
+      CirclePic:= new PictureWPF(sp.X-65, sp.Y+Sprite.Height/2-45,'img\enemy\circle.png');
+      CirclePic.Visible := False;
+    end;
+
+    procedure Select();
+    begin
+      if (BattleHandler.SelectedEnemy<>nil) then 
+        BattleHandler.SelectedEnemy.Deselect();
+      CirclePic.Visible := True;
+      LockThis:= True;
+      BattleHandler.SelectedEnemy:= self;
+    end;
+
+    procedure Deselect();
+    begin
+      BattleHandler.SelectedEnemy.GetCirclePic.Visible := False;    
+      BattleHandler.SelectedEnemy.SetLockThis:= False;
+      BattleHandler.SelectedEnemy := nil;
+    end;
+
+    procedure Attack(); override;      
+    begin
+      if (isDeath) or (BattleHandler.Player.GetHP <= 0) then exit;
+      BattleHandler.Player.Damage(attackDmg);
+      Sprite.PlayAnim('Attack');
+    end;
+    
+    procedure Damage(Dmg: integer); override;
+    begin
+      hp -= Dmg;
+      if (hp<=0) then Death() else Sprite.PlayAnim('Hit');
+    end;
+
+    procedure Destroy(); override;
+    begin
+      if (Sprite<>nil) then Sprite.Destroy(); Sprite := nil;
+      if (ShadowPic<>nil) then ShadowPic.Destroy(); ShadowPic := nil;
+      if (CirclePic<>nil) then CirclePic.Destroy(); CirclePic := nil;
+    end;
+    
+    property GetName: string read name;
+    property GetCirclePic: PictureWPF read GetCircle;
+    property GetDeath: boolean Read isDeath;
+    property SetLockThis: boolean write LockThis;
+    end;
+  
+  SkeletonEnemy = class(Enemy)
+    constructor Create(x, y:integer);
+    begin
+      inherited Create(x,y);
+      (name, hp, attackDmg, agility, Delay) := ('СКЕЛЕТОН', 9, 5, 3, 2000);
+      Sprite:= new LSprite(x,y,'Idle',LoadSprites('enemy\Skeleton\idle', 6));
+      Sprite.AddAnim('Hit', LoadSprites('enemy\Skeleton\hit', 4), 160, False, procedure()->
+        Sprite.PlayAnim('Idle'));
+      Sprite.AddAnim('Attack', LoadSprites('enemy\Skeleton\attack', 10), 160, False, procedure()->
+      sprite.PlayAnim('Idle'));
+      Sprite.AddAnim('Death', LoadSprites('enemy\Skeleton\death', 5), 160, False);
+      Sprite.PlayAnim('Idle');
+      CreateCircleShadowPics(40);
+    end;
+    end;
+  
+  TreeEnemy = class(Enemy)
+    constructor Create(x, y:integer);
+    begin
+      inherited Create(x,y);
+      (name, hp, attackDmg, agility, Delay) := ('ДРЕВО', 15, 4, 2, 2000);
+      Sprite:= new LSprite(x,y,'Idle',LoadSprites('enemy\Sprout\idle', 4));
+      Sprite.AddAnim('Hit', LoadSprites('enemy\Sprout\hit', 5), 160, False, procedure()->
+        Sprite.PlayAnim('Idle'));
+      Sprite.AddAnim('Attack', LoadSprites('enemy\Sprout\attack', 6), 160, False, procedure()->
+        Sprite.PlayAnim('Idle'));
+      Sprite.AddAnim('Death', LoadSprites('enemy\Sprout\death', 8), 160, False);
+      Sprite.PlayAnim('Idle');
+      CreateCircleShadowPics(45);
+    end;
+    end;
+  
+  GolemEnemy = class(Enemy)
+    constructor Create(x, y:integer);
+    begin
+      inherited Create(x,y);
+      (name, hp, attackDmg, agility, Delay) := ('ГОЛЕМ <БОСС>', 30, 10, 8, 2000);
+      Sprite:= new LSprite(x, y, 'Idle', LoadSprites('enemy\Golem\idle', 6));
+      Sprite.AddAnim('Hit', LoadSprites('enemy\Golem\hit', 4), 160, False, procedure()->
+        sprite.PlayAnim('Idle'));
+      Sprite.AddAnim('Attack', LoadSprites('enemy\Golem\attack', 8), 160, False, procedure()->
+        Sprite.PlayAnim('Idle'));
+      Sprite.AddAnim('Death', LoadSprites('enemy\Golem\death', 10), 160, False);
+      Sprite.PlayAnim('Idle'); //Включаем как анимацию по умолчанию
+      CreateCircleShadowPics(45);
+    end;
+    end;
+  
+  BattlePlayer = class(BattleEntity)
+    private
+    max_hp, armor:integer; //Максимальное здоровье игрока
+    procedure Death();
+    begin
+      Writeln('Игрок проиграл'); BattleHandler.EndBattle('Lose');
+    end;
+    public
+    constructor Create();
+    begin
+      var loader := new LALoader('data/userdata.json');
+      max_hp:= loader.GetValue&<integer>('$.max_hp');;
+      hp:= loader.GetValue&<integer>('$.hp');
+      armor:= loader.GetValue&<integer>('$.armor');
+      attackDmg:= 8;
+      agility:= 5;
+      Delay:= 250;
+    end;
+    
+    procedure Attack();override;      
+    begin
+      if (BattleHandler.SelectedEnemy = nil) then exit; 
+      BattleHandler.SelectedEnemy.Damage(AttackDmg);
+    end;
+
+    procedure AddHP(val:integer);
+    begin
+      hp += val;
+      if hp>max_hp then hp := max_hp;
+    end;
+        
+    procedure Damage(Dmg: integer);override;
+    begin
+      Dmg -= armor; if Dmg<=0 then Dmg := 1;
+      hp -= Dmg;
+      if (hp<=0) then begin
+        hp := 0;
+        BattleHandler.HpPanel.Text := hp +'/'+max_hp;
+        Death(); exit;
+      end;
+      BattleHandler.HpPanel.Text := hp +'/'+max_hp;
+    end;
+    
+    property GetHP: integer Read hp;
+    property GetMaxHP: integer Read max_hp;
+    property GetDamage: integer Read attackDmg;
+    property SetGetArmor: integer Read armor Write armor;
+  end;
+
+	BattleHandler = class
     private
     static ProcessTimer: Timer;
     static Stoptimer, isPlayerTurn: boolean;
@@ -505,247 +744,8 @@ type
       end;
   end;
 
-  Enemy = class(BattleEntity, IEnemy)
-    private
-    name:string;
-    Sprite : LSprite;
-    LockThis, isDeath: boolean; //Выбран ли этот враг || Убит ли этот враг
-    CirclePic, ShadowPic: PictureWPF; //Круг выделения и тень
-    ///Нажатие на врага в бою
-    procedure klik(x, y: real; mb: integer);
-    begin
-      if (Sprite <> nil) and (mb=1) and (Sprite.PtInside(x,y)) and not (LockThis) then 
-      begin Select(); end;
-    end;
-
-    procedure Death();
-    begin
-      isDeath := True;
-      BattleHandler.enemyCount -= 1;
-      OnMouseDown -= klik;
-      Sprite.PlayAnim('Death');
-    end;
+  
     
-    function GetCircle():PictureWPF;
-    begin
-      if (CirclePic<>nil) then Result := CirclePic;
-    end;
-
-    public
-    constructor Create(x,y:integer);
-    begin
-      BattleHandler.OnBattleEndEvent += procedure -> Destroy();
-      BattleHandler.enemyCount += 1;
-      OnMouseDown += klik;
-    end;
-
-    procedure CreateCircleShadowPics(yOffset:integer);
-    begin
-      var sp := Sprite.Pos;
-      ShadowPic := new PictureWPF(sp.X-65, sp.Y+Sprite.Height/2-yOffset, 'img\enemy\shadow.png');
-      CirclePic:= new PictureWPF(sp.X-65, sp.Y+Sprite.Height/2-45,'img\enemy\circle.png');
-      CirclePic.Visible := False;
-    end;
-
-    procedure Select();
-    begin
-      if (BattleHandler.SelectedEnemy<>nil) then 
-        BattleHandler.SelectedEnemy.Deselect();
-      CirclePic.Visible := True;
-      LockThis:= True;
-      BattleHandler.SelectedEnemy:= self;
-    end;
-
-    procedure Deselect();
-    begin
-      BattleHandler.SelectedEnemy.GetCirclePic.Visible := False;    
-      BattleHandler.SelectedEnemy.SetLockThis:= False;
-      BattleHandler.SelectedEnemy := nil;
-    end;
-
-    procedure Attack(); override;      
-    begin
-      if (isDeath) or (BattleHandler.Player.GetHP <= 0) then exit;
-      BattleHandler.Player.Damage(attackDmg);
-      Sprite.PlayAnim('Attack');
-    end;
-    
-    procedure Damage(Dmg: integer); override;
-    begin
-      hp -= Dmg;
-      if (hp<=0) then Death() else Sprite.PlayAnim('Hit');
-    end;
-
-    procedure Destroy(); override;
-    begin
-      if (Sprite<>nil) then Sprite.Destroy(); Sprite := nil;
-      if (ShadowPic<>nil) then ShadowPic.Destroy(); ShadowPic := nil;
-      if (CirclePic<>nil) then CirclePic.Destroy(); CirclePic := nil;
-    end;
-    
-    property GetName: string read name;
-    property GetCirclePic: PictureWPF read GetCircle;
-    property GetDeath: boolean Read isDeath;
-    property SetLockThis: boolean write LockThis;
-    end;
-  
-  SkeletonEnemy = class(Enemy)
-    constructor Create(x, y:integer);
-    begin
-      inherited Create(x,y);
-      (name, hp, attackDmg, agility, Delay) := ('СКЕЛЕТОН', 9, 5, 3, 2000);
-      Sprite:= new LSprite(x,y,'Idle',LoadSprites('enemy\Skeleton\idle', 6));
-      Sprite.AddAnim('Hit', LoadSprites('enemy\Skeleton\hit', 4), 160, False, procedure()->
-        Sprite.PlayAnim('Idle'));
-      Sprite.AddAnim('Attack', LoadSprites('enemy\Skeleton\attack', 10), 160, False, procedure()->
-      sprite.PlayAnim('Idle'));
-      Sprite.AddAnim('Death', LoadSprites('enemy\Skeleton\death', 5), 160, False);
-      Sprite.PlayAnim('Idle');
-      CreateCircleShadowPics(40);
-    end;
-    end;
-  
-  TreeEnemy = class(Enemy)
-    constructor Create(x, y:integer);
-    begin
-      inherited Create(x,y);
-      (name, hp, attackDmg, agility, Delay) := ('ДРЕВО', 15, 4, 2, 2000);
-      Sprite:= new LSprite(x,y,'Idle',LoadSprites('enemy\Sprout\idle', 4));
-      Sprite.AddAnim('Hit', LoadSprites('enemy\Sprout\hit', 5), 160, False, procedure()->
-        Sprite.PlayAnim('Idle'));
-      Sprite.AddAnim('Attack', LoadSprites('enemy\Sprout\attack', 6), 160, False, procedure()->
-        Sprite.PlayAnim('Idle'));
-      Sprite.AddAnim('Death', LoadSprites('enemy\Sprout\death', 8), 160, False);
-      Sprite.PlayAnim('Idle');
-      CreateCircleShadowPics(45);
-    end;
-    end;
-  
-  GolemEnemy = class(Enemy)
-    constructor Create(x, y:integer);
-    begin
-      inherited Create(x,y);
-      (name, hp, attackDmg, agility, Delay) := ('ГОЛЕМ <БОСС>', 30, 10, 8, 2000);
-      Sprite:= new LSprite(x, y, 'Idle', LoadSprites('enemy\Golem\idle', 6));
-      Sprite.AddAnim('Hit', LoadSprites('enemy\Golem\hit', 4), 160, False, procedure()->
-        sprite.PlayAnim('Idle'));
-      Sprite.AddAnim('Attack', LoadSprites('enemy\Golem\attack', 8), 160, False, procedure()->
-        Sprite.PlayAnim('Idle'));
-      Sprite.AddAnim('Death', LoadSprites('enemy\Golem\death', 10), 160, False);
-      Sprite.PlayAnim('Idle'); //Включаем как анимацию по умолчанию
-      CreateCircleShadowPics(45);
-    end;
-    end;
-  
-  BattlePlayer = class(BattleEntity, IBattlePlayer)
-    private
-    max_hp, armor:integer; //Максимальное здоровье игрока
-    procedure Death();
-    begin
-      Writeln('Игрок проиграл'); BattleHandler.EndBattle('Lose');
-    end;
-    public
-    constructor Create();
-    begin
-      var loader := new LALoader('data/userdata.json');
-      max_hp:= loader.GetValue&<integer>('$.max_hp');;
-      hp:= loader.GetValue&<integer>('$.hp');
-      armor:= loader.GetValue&<integer>('$.armor');
-      attackDmg:= 8;
-      agility:= 5;
-      Delay:= 250;
-    end;
-    
-    procedure Attack();override;      
-    begin
-      if (BattleHandler.SelectedEnemy = nil) then exit; 
-      BattleHandler.SelectedEnemy.Damage(AttackDmg);
-    end;
-
-    procedure AddHP(val:integer);
-    begin
-      hp += val;
-      if hp>max_hp then hp := max_hp;
-    end;
-        
-    procedure Damage(Dmg: integer);override;
-    begin
-      Dmg -= armor; if Dmg<=0 then Dmg := 1;
-      hp -= Dmg;
-      if (hp<=0) then begin
-        hp := 0;
-        BattleHandler.HpPanel.Text := hp +'/'+max_hp;
-        Death(); exit;
-      end;
-      BattleHandler.HpPanel.Text := hp +'/'+max_hp;
-    end;
-    
-    property GetHP: integer Read hp;
-    property GetMaxHP: integer Read max_hp;
-    property GetDamage: integer Read attackDmg;
-    property SetGetArmor: integer Read armor Write armor;
-    end;
-  
-  DialogHandler = class(IDialogHandler)
-    private
-    messages : array of string;
-    messageNum, messageCount:integer; //Текущий номер сообщения и текущий символ сообщения
-    messageTimer:Timer;
-    dialogRect:PictureWPF;
-    isDialogue: boolean; //Идёт ли диалог
-    procedure EndDialogue();
-    begin
-      GD.Player.SetUsing := False;
-      dialogRect.Visible := False;
-      messageTimer.Stop();
-      isDialogue := False;
-    end;
-    public
-    constructor Create();
-    begin
-      if (dialogRect = nil) then Redraw(procedure() -> begin
-        dialogRect := new PictureWPF(0,768-128,'img\ui\rect_game_big.png');
-        dialogRect := ApplyFontSettings(dialogRect) as PictureWPF;
-        dialogRect.FontSize := 24;
-        dialogRect.Visible := False;
-      end);
-      messageTimer := new Timer(16, procedure() -> begin
-        dialogRect.Text += messages[messageNum][messageCount];
-        if (messageCount = messages[messageNum].Length) then
-          messageTimer.Stop();
-        messageCount += 1;
-      end);
-    end;
-
-    procedure StartDialog(messages:array of string);
-    begin
-      dialogRect.ToFront();
-      (messageNum, messageCount, self.messages, isDialogue) := (-1,1,messages, True);
-      dialogRect.Visible := True;
-      GD.Player.SetUsing := True;
-      NextMessage();
-    end;
-
-    function NextMessage():boolean;
-    begin
-      if not isDialogue then exit;
-      Result:=True; //Диалог может продолжаться
-      if (messageTimer.Enabled) then
-      begin
-        messageTimer.Stop(); dialogRect.Text := messages[messageNum]; exit;
-      end;
-      messageNum += 1;
-
-      //Если показали все сообщения, то закрываем окно диалога.
-      if (messageNum = messages.Length) then begin
-        EndDialogue(); exit;
-      end;
-      //Начинаем с первого символа сообщения и пустого текста в окне сообщений
-      messageCount := 1; dialogRect.Text := '';
-      messageTimer.Start();
-    end;
-  end;
-  
   UseObject = class(IUseObject)
     public
     procedure Use(); virtual; begin end;
@@ -760,7 +760,7 @@ type
     begin self.messages := messages; end;
 
     procedure Use(); override; begin
-      if (GD.DialogHandler <> nil) then GD.DialogHandler.StartDialog(messages);
+      if (DialogHandler <> nil) then DialogHandler.StartDialog(messages);
     end;
     end;
   
@@ -848,7 +848,7 @@ type
     begin
       if BattleCell.battleCellCount > 0 then begin
         var messages:array of string := ('За моей спиной остались противники, я не могу быть небрежным!');
-        GD.DialogHandler.StartDialog(messages);
+        DialogHandler.StartDialog(messages);
       end
       else ChangeLevel(levelName);
     end;
@@ -878,7 +878,7 @@ type
       inherited Pickup();
       BattleHandler.Player.AddHP(potionPower);
       var messages:array of string := ($'Вы восстановили {potionPower} ед. маны.');
-      GD.DialogHandler.StartDialog(messages);
+      DialogHandler.StartDialog(messages);
     end;
     public
     constructor Create(x,y:integer; amount:integer);
@@ -896,12 +896,12 @@ type
       inherited Pickup();
       if (BattleHandler.Player.SetGetArmor>armorValue) then begin
         var messages:array of string := ( $'Эта броня хуже вашей.');
-        GD.DialogHandler.StartDialog(messages);
+        DialogHandler.StartDialog(messages);
         exit;
       end;
       BattleHandler.Player.SetGetArmor := armorValue;
       var messages:array of string := ( $'Вы надели броню поглощающую {armorValue} ед. урона.');
-      GD.DialogHandler.StartDialog(messages);
+      DialogHandler.StartDialog(messages);
     end;
     public
     constructor Create(x,y:integer; amount:integer);
@@ -1050,47 +1050,9 @@ type
     property SetUsing: boolean write isUsing;
   end;
   
-  TransitionPic = class (ITransitionPic)
-    private
-    pic:RectangleWPF;
-    proc:delegate;
-    public
-    constructor Create;
-    begin
-      Redraw(procedure()-> begin
-        pic := new RectangleWPF(0, 0, 1296, 768, Colors.Black);
-        pic := ApplyFontSettings(pic) as RectangleWPF; pic.Visible := False;
-      end);
-      OnDrawFrame += procedure(dt:real) -> GD.TransPic.ToFront();
-    end;
-    
-    ///Показать изображение перехода
-    procedure Show(delay:integer; p:delegate:=nil) := Show('Загрузка уровня...', delay, p);
-    
-    ///Показать изображение перехода с нужным текстом после загрузки
-    procedure Show(message:string; delay:integer; p:delegate:=nil);
-    begin
-      proc:=p;
-      if (GD.player <> nil) then GD.player.isBlocked := True; //Блокируем движение игрока
-      Redraw(procedure -> (pic.Visible, pic.Text) := (True, message));
-      DelayAction(delay, procedure -> Hide());
-    end;
-    
-    ///Скрыть изображение перехода
-    procedure Hide();
-    begin
-      if (proc<>nil) then proc;
-      pic.Visible := False;
-    end;
-    
-    procedure ToFront();
-    begin if (pic <> nil) then pic.ToFront(); end;
-  end;
-  
   ///Загружает уровень с именем lname и настраивает сетку grid.
   procedure LoadLevel(lname:string);
   begin
-    
     var loader := new LALoader('data/levels/LALevels.ldtk');
     GD.TransPic.Show(1000, procedure()-> begin GD.Player.isBlocked := False end);
     var i := -1;
@@ -1258,7 +1220,7 @@ type
 
     GD.BgPic := new PictureWPF(0,0, 'img\MainMenuField1.png');   
     if (GD.TransPic = nil) then GD.TransPic := new TransitionPic();
-    if (GD.DialogHandler = nil) then GD.DialogHandler := new DialogHandler();
+    if (DialogHandler = nil) then DialogHandler := new DialogHandler();
     DrawMainMenu();
   end;
 end.
