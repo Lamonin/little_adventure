@@ -1,5 +1,4 @@
-﻿//МОДУЛЬ ВСПОМОГАТЕЛЬНЫХ ФУНКЦИЙ
-unit Loader;
+﻿unit Loader;
 uses System, System.IO, System.Diagnostics;
 
 ///Устанавливаем шрифты программы
