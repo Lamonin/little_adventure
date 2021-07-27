@@ -71,11 +71,7 @@ type
     ///Сохраняет изменения в файле
     procedure SaveFile() := WriteAllText(path, jObj.ToString(), Encoding.UTF8);
   end;
-  
-  //##############-НАЧАЛО_ИНТЕРФЕЙС-################
-  ///Пример использования:
-  ///var b:= new Button(100, 200, 'img/ui/play.png', 'img/ui/playpress.png');
-  ///b.OnClick += procedure() -> begin КОД КОТОРЫЙ ВЫПОЛНИТСЯ ПРИ НАЖАТИИ КНОПКИ end;
+
   Button = class
     private
     pic:PictureWPF; isClicked, isActive:boolean;
@@ -144,7 +140,6 @@ type
     property Text: string read buttonText write SetText;
     property Active: boolean read isActive write SetActive;
   end;
-  //##############-КОНЕЦ_ИНТЕРФЕЙС-#################
   
   //##############-НАЧАЛО_СПРАЙТЫ-################
   spriteInfo=record
@@ -269,25 +264,23 @@ type
   //##############-КОНЕЦ_СПРАЙТЫ-################
 
   type
-	TransitionPic = class (TransitionPic)
+	TransitionPic = class
     private
-    pic:RectangleWPF;
-    proc:delegate;
+    static pic:RectangleWPF;
+    static proc:delegate;
     public
-    constructor Create;
+    static constructor();
     begin
-      Redraw(procedure()-> begin
-        pic := new RectangleWPF(0, 0, 1296, 768, Colors.Black);
-        pic := ApplyFontSettings(pic) as RectangleWPF; pic.Visible := False;
-      end);
-      OnDrawFrame += procedure(dt:real) -> GD.TransPic.ToFront();
+      pic := new RectangleWPF(0, 0, 1296, 768, Colors.Black);
+      pic := ApplyFontSettings(pic) as RectangleWPF; pic.Visible := False;
+      OnDrawFrame += procedure(dt:real) -> ToFront();
     end;
     
     ///Показать изображение перехода
-    procedure Show(delay:integer; p:delegate:=nil) := Show('Загрузка уровня...', delay, p);
+    static procedure Show(delay:integer; p:delegate:=nil) := Show('Загрузка уровня...', delay, p);
     
     ///Показать изображение перехода с нужным текстом после загрузки
-    procedure Show(message:string; delay:integer; p:delegate:=nil);
+    static procedure Show(message:string; delay:integer; p:delegate:=nil);
     begin
       proc:=p;
       Redraw(procedure -> (pic.Visible, pic.Text) := (True, message));
@@ -295,24 +288,24 @@ type
     end;
     
     ///Скрыть изображение перехода
-    procedure Hide();
+    static procedure Hide();
     begin
       if (proc<>nil) then proc;
       pic.Visible := False;
     end;
     
-    procedure ToFront();
+    static procedure ToFront();
     begin if (pic <> nil) then pic.ToFront(); end;
   end;
 
 	DialogHandler = class
     private
-    messages : array of string;
-    messageNum, messageCount:integer; //Текущий номер сообщения и текущий символ сообщения
-    messageTimer:Timer;
-    dialogRect:PictureWPF;
-    isDialogue: boolean; //Идёт ли диалог
-    procedure EndDialogue();
+    static messages : array of string;
+    static messageNum, messageCount:integer; //Текущий номер сообщения и текущий символ сообщения
+    static messageTimer:Timer;
+    static dialogRect:PictureWPF;
+    static isDialogue: boolean; //Идёт ли диалог
+    static procedure EndDialogue();
     begin
       GD.Player.SetUsing := False;
       dialogRect.Visible := False;
@@ -320,9 +313,9 @@ type
       isDialogue := False;
     end;
     public
-    constructor Create();
+    static constructor();
     begin
-      if (dialogRect = nil) then Redraw(procedure() -> begin
+      Redraw(procedure() -> begin
         dialogRect := new PictureWPF(0,768-128,'img\ui\rect_game_big.png');
         dialogRect := ApplyFontSettings(dialogRect) as PictureWPF;
         dialogRect.FontSize := 24;
@@ -336,7 +329,7 @@ type
       end);
     end;
 
-    procedure StartDialog(messages:array of string);
+    static procedure StartDialog(messages:array of string);
     begin
       dialogRect.ToFront();
       (messageNum, messageCount, self.messages, isDialogue) := (-1,1,messages, True);
@@ -345,7 +338,7 @@ type
       NextMessage();
     end;
 
-    function NextMessage():boolean;
+    static function NextMessage():boolean;
     begin
       if not isDialogue then exit;
       Result:=True; //Диалог может продолжаться
@@ -1219,8 +1212,6 @@ type
     Window.CenterOnScreen();
 
     GD.BgPic := new PictureWPF(0,0, 'img\MainMenuField1.png');   
-    if (GD.TransPic = nil) then GD.TransPic := new TransitionPic();
-    if (DialogHandler = nil) then DialogHandler := new DialogHandler();
     DrawMainMenu();
   end;
 end.
