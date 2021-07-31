@@ -20,6 +20,14 @@ end;
 procedure ChangePicture(var from:PictureWPF; path:string);
 begin var p := from; from := new PictureWPF(p.LeftTop, path); p.Destroy(); end;
 
+function ChangePicture(var from, too:PictureWPF):PictureWPF;
+begin
+  if (from = nil) or (too = nil) then exit;
+  from.Visible := false;
+  too.Visible := true;
+  Result := too;
+end;
+
 function ApplyFontSettings(const obj:ObjectWPF):ObjectWPF;
 begin
   obj.SetText(obj.Text, 32, 'GranaPadano', ARGB(255, 255, 214, 0));
@@ -76,8 +84,20 @@ type
 
   Button = class
     private
-    pic:PictureWPF; isClicked, isActive:boolean;
+    pic, idle, click:PictureWPF; 
+    isClicked:boolean;
+    isActive:boolean:=True;
     idlePic, clickPic, buttonText:string;
+    hoverPic:RectangleWPF;
+    
+    procedure Hover(x, y: real; mousebutton: integer);
+    begin
+      if isClicked or not isActive then exit;
+      if (PtInside(x,y,pic)) then
+        hoverPic.Visible := True
+      else
+        hoverPic.Visible := False;
+    end;
     
     ///Изменение спрайта на clickPic
     procedure Clicked(x, y: real; mousebutton: integer);
@@ -86,7 +106,7 @@ type
       if (mousebutton <> 1) and (isClicked) then exit;
       if PtInside(x,y,pic) then begin 
         isClicked := True;
-        ChangePicture(pic, clickPic); ApplyText();
+        pic := ChangePicture(pic, click); ApplyText();
       end;
     end;
     
@@ -94,7 +114,7 @@ type
     procedure Process(x, y: real; mousebutton: integer);
     begin
       if (pic = nil) or not isActive then exit;
-      ChangePicture(pic, idlePic); ApplyText();
+      pic := ChangePicture(pic, idle); ApplyText();
       if (mousebutton <> 0) then exit;
       if (OnClick <> nil) and PtInside(x,y,pic) and (isClicked) then OnClick();
       isClicked := False;
@@ -109,9 +129,10 @@ type
 
     procedure SetActive(t:boolean);
     begin
-      isActive := t; var ts:= clickPic;
-      if t then ts:= idlePic;
-      ChangePicture(pic, ts); ApplyText();
+      isActive := t; var ts:= click;
+      if t then ts:= idle
+      else hoverPic.Visible := False;
+      pic := ChangePicture(pic, ts); ApplyText();
     end;
     
     procedure SetText(t:string);
@@ -125,24 +146,32 @@ type
     ///И с изображением по нажатию clickPic.
     constructor Create(x,y:integer; idlePic, clickPic:string);
     begin
-      isActive := True;
       self.idlePic := 'img\ui\' + idlePic;
       self.clickPic := 'img\ui\' + clickPic;
       
-      pic := new PictureWPF(x, y, self.idlePic);
+      idle := new PictureWPF(x, y, self.idlePic);
+      click := new PictureWPF(x,y, self.clickPic);
+      click.Visible := False;
+      pic := idle;
+      hoverPic := new RectangleWPF(x,y,pic.Width, pic.Height, Colors.Transparent, 4, ARGB(255, 255, 214, 0));
+      hoverPic.Visible := false;
       OnMouseDown += Clicked; OnMouseUp += Process;
+      OnMouseMove += Hover;
     end;
 
     constructor Create(x,y:integer; text, idlePic, clickPic:string);
     begin
       Create(x,y, idlePic, clickPic);
       Self.Text := text;
+      ApplyText();
     end;
     
     procedure Destroy();
     begin
       OnMouseDown -= Clicked; OnMouseUp -= Process;
+      OnMouseMove -= Hover;
       if (pic = nil) then exit;
+      hoverPic.Destroy();
       pic.Destroy(); pic := nil;
     end;
     
@@ -450,12 +479,23 @@ type
       OnMouseDown += klik;
     end;
 
-    procedure CreateCircleShadowPics(yOffset:integer);
+    procedure CreateCircleShadowPics();
+    begin
+      Redraw(procedure -> begin 
+        ShadowPic := new PictureWPF(0,0, 'img\enemy\shadow.png');
+        ShadowPic.Visible := False;
+        CirclePic:= new PictureWPF(0,0,'img\enemy\circle.png');
+        CirclePic.Visible := False;
+      end);
+    end;
+
+    procedure MoveCircleShadowPics(yOffset:integer);
     begin
       Redraw(procedure -> begin 
         var sp := Sprite.Pos;
-        ShadowPic := new PictureWPF(sp.X-65, sp.Y+Sprite.Height/2-yOffset, 'img\enemy\shadow.png');
-        CirclePic:= new PictureWPF(sp.X-65, sp.Y+Sprite.Height/2-45,'img\enemy\circle.png');
+        ShadowPic.MoveTo(sp.X-65, sp.Y+Sprite.Height/2-yOffset);
+        ShadowPic.Visible := True;
+        CirclePic.MoveTo(sp.X-65, sp.Y+Sprite.Height/2-45);
         CirclePic.Visible := False;
       end);
     end;
@@ -505,6 +545,7 @@ type
     begin
       inherited Create(x,y);
       (name, hp, attackDmg, agility, Delay) := ('СКЕЛЕТОН', 9, 5, 3, 2000);
+      CreateCircleShadowPics();
       Sprite:= new LSprite(x,y,'Idle',LoadSprites('enemy\Skeleton\idle', 6));
       Sprite.AddAnim('Hit', LoadSprites('enemy\Skeleton\hit', 4), 160, False, procedure()->
         Sprite.PlayAnim('Idle'));
@@ -512,7 +553,7 @@ type
       sprite.PlayAnim('Idle'));
       Sprite.AddAnim('Death', LoadSprites('enemy\Skeleton\death', 5), 160, False);
       Sprite.PlayAnim('Idle');
-      CreateCircleShadowPics(40);
+      MoveCircleShadowPics(40);
     end;
     end;
   
@@ -521,6 +562,7 @@ type
     begin
       inherited Create(x,y);
       (name, hp, attackDmg, agility, Delay) := ('ДРЕВО', 15, 4, 2, 2000);
+      CreateCircleShadowPics();
       Sprite:= new LSprite(x,y,'Idle',LoadSprites('enemy\Sprout\idle', 4));
       Sprite.AddAnim('Hit', LoadSprites('enemy\Sprout\hit', 5), 160, False, procedure()->
         Sprite.PlayAnim('Idle'));
@@ -528,7 +570,7 @@ type
         Sprite.PlayAnim('Idle'));
       Sprite.AddAnim('Death', LoadSprites('enemy\Sprout\death', 8), 160, False);
       Sprite.PlayAnim('Idle');
-      CreateCircleShadowPics(45);
+      MoveCircleShadowPics(45);
     end;
     end;
   
@@ -537,6 +579,7 @@ type
     begin
       inherited Create(x,y);
       (name, hp, attackDmg, agility, Delay) := ('ГОЛЕМ <БОСС>', 30, 10, 8, 2000);
+      CreateCircleShadowPics();
       Sprite:= new LSprite(x, y, 'Idle', LoadSprites('enemy\Golem\idle', 6), 120, True);
       Sprite.AddAnim('Hit', LoadSprites('enemy\Golem\hit', 4), 120, False, procedure()->
         sprite.PlayAnim('Idle'));
@@ -544,7 +587,7 @@ type
         Sprite.PlayAnim('Idle'));
       Sprite.AddAnim('Death', LoadSprites('enemy\Golem\death', 10), 120, False);
       Sprite.PlayAnim('Idle'); //Включаем как анимацию по умолчанию
-      CreateCircleShadowPics(45);
+      MoveCircleShadowPics(45);
     end;
     end;
   
@@ -639,9 +682,14 @@ type
       //Ходит игрок
       if ActionList[i] is BattlePlayer then begin 
         isPlayerTurn:= True; 
-        TurnRect.Text := 'ВАШ ХОД'; i+=1; exit; 
+        TurnRect.Text := 'ВАШ ХОД'; i+=1;
+        b_attack.Active := True;
+        b_run.Active := True;
+        exit; 
       end;
       TurnRect.Text := 'ХОД ПРОТИВНИКА';
+      b_attack.Active := False;
+      b_run.Active := False;
       ActionList[i].Attack(BPlayer);
       BattleHandler.HpPanel.Text := BPlayer.GetHP +'/'+BPlayer.GetMaxHP;
       if BPlayer.GetHP=0 then EndBattle('Lose'); i+=1;
@@ -739,6 +787,8 @@ type
         b_run.isActive := False;
         BattleHandler.EndBattle('Run');
       end;
+      b_attack.Active := False;
+      b_run.Active := False;
       //Спавним противников
       BattleHandler.EnemyList:= new List<Enemy>();
       for var i:= enemys.Length-1 downto 0 do
@@ -1189,7 +1239,7 @@ type
     Window.IsFixedSize := True; Window.SetSize(1296, 768);
     Window.CenterOnScreen();
 
-    BgPic := new PictureWPF(0,0, 'img\MainMenuField1.png');   
+    BgPic := new PictureWPF(0,0, 'data\levels\LALevels\png\MenuBackground.png');   
     DrawMainMenu();
   end; 
 end.
