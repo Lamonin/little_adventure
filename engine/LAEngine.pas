@@ -452,10 +452,12 @@ type
 
     procedure CreateCircleShadowPics(yOffset:integer);
     begin
-      var sp := Sprite.Pos;
-      ShadowPic := new PictureWPF(sp.X-65, sp.Y+Sprite.Height/2-yOffset, 'img\enemy\shadow.png');
-      CirclePic:= new PictureWPF(sp.X-65, sp.Y+Sprite.Height/2-45,'img\enemy\circle.png');
-      CirclePic.Visible := False;
+      Redraw(procedure -> begin 
+        var sp := Sprite.Pos;
+        ShadowPic := new PictureWPF(sp.X-65, sp.Y+Sprite.Height/2-yOffset, 'img\enemy\shadow.png');
+        CirclePic:= new PictureWPF(sp.X-65, sp.Y+Sprite.Height/2-45,'img\enemy\circle.png');
+        CirclePic.Visible := False;
+      end);
     end;
 
     procedure Select();
@@ -689,22 +691,11 @@ type
     begin
       (x, y):=(xc,yc);
       Transition.Show('НАЧАЛО БОЯ', 1000, procedure() -> CombatTimer.Start);
-      CombatPic := new PictureWPF(0, 0,'data\levels\LALevels\png\CombatField.png');
-      BattleHandler.EnemyList:= new List<Enemy>();
-      for var i:= enemys.Length-1 downto 0 do
-        case (i+1) of
-            3: CreateEnemy(enemys[i], 10, 3);
-            2: CreateEnemy(enemys[i], 16, 3);
-            4: CreateEnemy(enemys[i], 7, 5);
-            1: CreateEnemy(enemys[i], 13, 5);
-            5: CreateEnemy(enemys[i], 19, 5);
-        end;
       //Отрисовка интерфейса боя
       Redraw(procedure -> begin
-        b_attack:= new Button(167, 692, 'rect_button_battle.png', 'rect_button_battle_click.png');
-        b_attack.Text := 'АТАКА';
-        b_run:= new Button(656, 692, 'rect_button_battle.png', 'rect_button_battle_click.png');
-        b_run.Text := 'ПОБЕГ';
+        CombatPic := new PictureWPF(0, 0,'data\levels\LALevels\png\CombatField.png');
+        b_attack:= new Button(167, 692, 'АТАКА','rect_button_battle.png', 'rect_button_battle_click.png');
+        b_run:= new Button(656, 692, 'ПОБЕГ', 'rect_button_battle.png', 'rect_button_battle_click.png');
 
         TurnRect := new PictureWPF(327, 572, 'img\ui\rect_battle_turn.png');
         TurnRect := ApplyFontSettings(TurnRect) as PictureWPF;
@@ -731,8 +722,9 @@ type
         DamagePanel.AddChild(icon, Alignment.LeftTop);
         DamagePanel := ApplyFontSettings(DamagePanel) as PictureWPF;
         DamagePanel.Text := BPlayer.GetDamage.ToString();
+
+        EnemyPanel.Text := '';
       end);
-      //Инициализируем элементы интерфейса боя
       
       b_attack.OnClick += procedure() -> begin
         if (BattleHandler.isPlayerTurn) and (Enemy.SelectedEnemy<> nil) then
@@ -747,11 +739,18 @@ type
         b_run.isActive := False;
         BattleHandler.EndBattle('Run');
       end;
-    
-      //Закончили инициализацию интерфейса
-      EnemyPanel.Text := '';
+      //Спавним противников
+      BattleHandler.EnemyList:= new List<Enemy>();
+      for var i:= enemys.Length-1 downto 0 do
+        case (i+1) of
+            3: CreateEnemy(enemys[i], 10, 3);
+            2: CreateEnemy(enemys[i], 16, 3);
+            4: CreateEnemy(enemys[i], 7, 5);
+            1: CreateEnemy(enemys[i], 13, 5);
+            5: CreateEnemy(enemys[i], 19, 5);
+        end;
       foreach var t in EnemyList do begin if not t.GetDeath then EnemyPanel.Text += t.GetName + '  |  '; end;
-      
+      //Начало боя
       CombatTimer := new Timer(250, procedure() ->
       begin
         if (StopTimer) then exit;
@@ -766,7 +765,6 @@ type
         begin Stoptimer:= True; ProcessAttack(ActionList); end;
         end);
       end;
-
     end;
 
   MessageCell = class (UseObject)
@@ -1109,7 +1107,7 @@ type
     Grid := t; // Обнуляем таким образом сетку уровня
   end;
   
-  ///Меняет текущий уровень на уровень с именем lname.
+  ///Меняет текущий уровень на уровень с именем lname и сохраняет прогресс игрока.
   procedure ChangeLevel(lname:string);
   begin
     CloseLevel();
@@ -1119,7 +1117,7 @@ type
     if (BPlayer <> nil) then begin
       loader.SetValue('hp', BPlayer.GetHP);
       loader.SetValue('armor', BPlayer.SetGetArmor);
-      end;
+    end;
     loader.SaveFile();
     LoadLevel(lname);
   end;
@@ -1135,11 +1133,11 @@ type
     b_confirm := new Button(384, 424, 'ОК', 'rect_menu_rules_wide.png', 'rect_menu_rules_wide_click.png');
     b_cancel := new Button(656, 424, 'ОТМЕНА', 'rect_menu_rules_wide.png', 'rect_menu_rules_wide_click.png');
     
-    b_confirm.OnClick += procedure() -> begin 
+    b_confirm.OnClick += procedure -> begin 
       confirm; r_body.Destroy(); b_confirm.Destroy(); b_cancel.Destroy(); 
     end;
     
-    b_cancel.OnClick += procedure() -> begin
+    b_cancel.OnClick += procedure -> begin
       cancel; r_body.Destroy(); b_confirm.Destroy(); b_cancel.Destroy(); 
     end;
   end;
@@ -1151,7 +1149,7 @@ type
     //Отрисовка интерфейса меню
     Redraw(procedure -> begin
       b_continue := new Button(510, 561, 'ПРОДОЛЖИТЬ', 'rect_menu_wide.png', 'rect_menu_wide_click.png');
-      b_continue.Active := loader.GetValue&<string>('current_level') = '';
+      b_continue.Active := loader.GetValue&<string>('current_level') <> '';
       b_startNew := new Button(510, 625, 'НОВАЯ ИГРА', 'rect_menu_wide.png', 'rect_menu_wide_click.png');
       b_exit := new Button(510, 689, 'ВЫХОД', 'rect_menu_wide.png', 'rect_menu_wide_click.png');
     end);
