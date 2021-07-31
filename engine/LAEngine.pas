@@ -132,6 +132,12 @@ type
       pic := new PictureWPF(x, y, self.idlePic);
       OnMouseDown += Clicked; OnMouseUp += Process;
     end;
+
+    constructor Create(x,y:integer; text, idlePic, clickPic:string);
+    begin
+      Create(x,y, idlePic, clickPic);
+      Self.Text := text;
+    end;
     
     procedure Destroy();
     begin
@@ -311,8 +317,8 @@ type
     ///Показать изображение перехода с нужным текстом после загрузки
     static procedure Show(message:string; delay:integer; p:delegate:=nil);
     begin
+      (pic.Visible, pic.Text) := (True, message);
       proc:=p;
-      Redraw(procedure -> (pic.Visible, pic.Text) := (True, message));
       DelayAction(delay, procedure -> Hide());
     end;
     
@@ -685,17 +691,49 @@ type
       Transition.Show('НАЧАЛО БОЯ', 1000, procedure() -> CombatTimer.Start);
       CombatPic := new PictureWPF(0, 0,'data\levels\LALevels\png\CombatField.png');
       BattleHandler.EnemyList:= new List<Enemy>();
-      for var i:= 0 to enemys.Length-1 do
+      for var i:= enemys.Length-1 downto 0 do
         case (i+1) of
-            1: CreateEnemy(enemys[i], 13, 5);
-            2: CreateEnemy(enemys[i], 16, 3);
             3: CreateEnemy(enemys[i], 10, 3);
+            2: CreateEnemy(enemys[i], 16, 3);
             4: CreateEnemy(enemys[i], 7, 5);
+            1: CreateEnemy(enemys[i], 13, 5);
             5: CreateEnemy(enemys[i], 19, 5);
         end;
+      //Отрисовка интерфейса боя
+      Redraw(procedure -> begin
+        b_attack:= new Button(167, 692, 'rect_button_battle.png', 'rect_button_battle_click.png');
+        b_attack.Text := 'АТАКА';
+        b_run:= new Button(656, 692, 'rect_button_battle.png', 'rect_button_battle_click.png');
+        b_run.Text := 'ПОБЕГ';
+
+        TurnRect := new PictureWPF(327, 572, 'img\ui\rect_battle_turn.png');
+        TurnRect := ApplyFontSettings(TurnRect) as PictureWPF;
+        TurnRect.FontSize := 28;
+        
+        EnemyPanel:= new PictureWPF(167, 616, 'img\ui\rect_panel_battle.png');
+        EnemyPanel := ApplyFontSettings(EnemyPanel) as PictureWPF;
+
+        HpPanel := new PictureWPF(167, 572, 'img\ui\hp_bar.png');
+        ArmorPanel := new PictureWPF(936, 572, 'img\ui\rect_battle_mini.png');
+        DamagePanel := new PictureWPF(1041, 572, 'img\ui\rect_battle_mini.png');
+
+        var icon := new PictureWPF(0,0,'img\ui\icon_hp.png');
+        HpPanel.AddChild(icon, Alignment.LeftTop);
+        HpPanel := ApplyFontSettings(HpPanel) as PictureWPF;
+        HpPanel.Text := BPlayer.GetHP +'/'+BPlayer.GetMaxHP;
+        
+        icon := new PictureWPF(0,0,'img\ui\icon_armor.png');
+        ArmorPanel.AddChild(icon, Alignment.LeftTop);
+        ArmorPanel := ApplyFontSettings(ArmorPanel) as PictureWPF;
+        ArmorPanel.Text := BPlayer.SetGetArmor.ToString();
+
+        icon := new PictureWPF(0,0,'img\ui\icon_damage.png');
+        DamagePanel.AddChild(icon, Alignment.LeftTop);
+        DamagePanel := ApplyFontSettings(DamagePanel) as PictureWPF;
+        DamagePanel.Text := BPlayer.GetDamage.ToString();
+      end);
       //Инициализируем элементы интерфейса боя
-      b_attack:= new Button(167, 692, 'rect_button_battle.png', 'rect_button_battle_click.png');
-      b_attack.Text := 'АТАКА';
+      
       b_attack.OnClick += procedure() -> begin
         if (BattleHandler.isPlayerTurn) and (Enemy.SelectedEnemy<> nil) then
         begin BattleHandler.isPlayerTurn:= False;
@@ -704,39 +742,12 @@ type
           Enemy.SelectedEnemy.Deselect();
         end;
       end;
-
-      b_run:= new Button(656, 692, 'rect_button_battle.png', 'rect_button_battle_click.png');
-      b_run.Text := 'ПОБЕГ';
+     
       b_run.OnClick += procedure() -> begin
         b_run.isActive := False;
         BattleHandler.EndBattle('Run');
       end;
-      
-      TurnRect := new PictureWPF(327, 572, 'img\ui\rect_battle_turn.png');
-      TurnRect := ApplyFontSettings(TurnRect) as PictureWPF;
-      TurnRect.FontSize := 28;
-      
-      EnemyPanel:= new PictureWPF(167, 616, 'img\ui\rect_panel_battle.png');
-      EnemyPanel := ApplyFontSettings(EnemyPanel) as PictureWPF;
-
-      HpPanel := new PictureWPF(167, 572, 'img\ui\hp_bar.png');
-      ArmorPanel := new PictureWPF(936, 572, 'img\ui\rect_battle_mini.png');
-      DamagePanel := new PictureWPF(1041, 572, 'img\ui\rect_battle_mini.png');
-
-      var icon := new PictureWPF(0,0,'img\ui\icon_hp.png');
-      HpPanel.AddChild(icon, Alignment.LeftTop);
-      HpPanel := ApplyFontSettings(HpPanel) as PictureWPF;
-      HpPanel.Text := BPlayer.GetHP +'/'+BPlayer.GetMaxHP;
-      
-      icon := new PictureWPF(0,0,'img\ui\icon_armor.png');
-      ArmorPanel.AddChild(icon, Alignment.LeftTop);
-      ArmorPanel := ApplyFontSettings(ArmorPanel) as PictureWPF;
-      ArmorPanel.Text := BPlayer.SetGetArmor.ToString();
-
-      icon := new PictureWPF(0,0,'img\ui\icon_damage.png');
-      DamagePanel.AddChild(icon, Alignment.LeftTop);
-      DamagePanel := ApplyFontSettings(DamagePanel) as PictureWPF;
-      DamagePanel.Text := BPlayer.GetDamage.ToString();
+    
       //Закончили инициализацию интерфейса
       EnemyPanel.Text := '';
       foreach var t in EnemyList do begin if not t.GetDeath then EnemyPanel.Text += t.GetName + '  |  '; end;
@@ -1118,22 +1129,18 @@ type
   var b_confirm, b_cancel: Button;
   begin
     var r_body := new PictureWPF(384, 280, 'img\ui\rect_confirm.png');
-    r_body.Text := text;
     r_body := ApplyFontSettings(r_body) as PictureWPF;
+    r_body.Text := text;
 
-    b_confirm := new Button(384, 424, 'rect_menu_rules_wide.png', 'rect_menu_rules_wide_click.png');
-    b_confirm.Text := 'ОК';
-    b_cancel := new Button(656, 424, 'rect_menu_rules_wide.png', 'rect_menu_rules_wide_click.png');
-    b_cancel.Text := 'ОТМЕНА';
+    b_confirm := new Button(384, 424, 'ОК', 'rect_menu_rules_wide.png', 'rect_menu_rules_wide_click.png');
+    b_cancel := new Button(656, 424, 'ОТМЕНА', 'rect_menu_rules_wide.png', 'rect_menu_rules_wide_click.png');
     
     b_confirm.OnClick += procedure() -> begin 
-      confirm; 
-      r_body.Destroy(); b_confirm.Destroy(); b_cancel.Destroy(); 
+      confirm; r_body.Destroy(); b_confirm.Destroy(); b_cancel.Destroy(); 
     end;
     
     b_cancel.OnClick += procedure() -> begin
-      cancel; 
-      r_body.Destroy(); b_confirm.Destroy(); b_cancel.Destroy(); 
+      cancel; r_body.Destroy(); b_confirm.Destroy(); b_cancel.Destroy(); 
     end;
   end;
   
@@ -1141,17 +1148,14 @@ type
   var b_continue, b_startNew, b_exit:Button;
   begin
     var loader := new LALoader('data/userdata.json');
-    b_continue := new Button(510, 561, 'rect_menu_wide.png', 'rect_menu_wide_click.png');
-    b_continue.Text := 'ПРОДОЛЖИТЬ'; 
-    if loader.GetValue&<string>('current_level') = '' then b_continue.Active := False;
-    
-    b_startNew := new Button(510, 625, 'rect_menu_wide.png', 'rect_menu_wide_click.png');
-    b_startNew.Text := 'НОВАЯ ИГРА';
+    //Отрисовка интерфейса меню
+    Redraw(procedure -> begin
+      b_continue := new Button(510, 561, 'ПРОДОЛЖИТЬ', 'rect_menu_wide.png', 'rect_menu_wide_click.png');
+      b_continue.Active := loader.GetValue&<string>('current_level') = '';
+      b_startNew := new Button(510, 625, 'НОВАЯ ИГРА', 'rect_menu_wide.png', 'rect_menu_wide_click.png');
+      b_exit := new Button(510, 689, 'ВЫХОД', 'rect_menu_wide.png', 'rect_menu_wide_click.png');
+    end);
 
-    ///Завершает работу игры.
-    b_exit := new Button(510, 689, 'rect_menu_wide.png', 'rect_menu_wide_click.png');
-    b_exit.Text := 'ВЫХОД';
-    
     //Делегат, при вызове удаляет кнопки
     var delButtons := procedure() -> begin
       b_continue.Destroy(); b_startNew.Destroy();
