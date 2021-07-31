@@ -22,8 +22,8 @@ begin var p := from; from := new PictureWPF(p.LeftTop, path); p.Destroy(); end;
 
 function ApplyFontSettings(const obj:ObjectWPF):ObjectWPF;
 begin
-  (obj.FontName, obj.FontColor, obj.FontSize, obj.TextAlignment) := 
-  ('GranaPadano', ARGB(255, 255, 214, 0), 32, Alignment.Center);
+  obj.SetText(obj.Text, 32, 'GranaPadano', ARGB(255, 255, 214, 0));
+  obj.TextAlignment := Alignment.Center;
   Result := obj;
 end;
 //###---------------------------------------------
@@ -145,7 +145,7 @@ type
   end;
   
   spriteInfo=record
-    frames:array of string; //Кадры анимации.
+    frames:array of PictureWPF; //Кадры анимации.
     speed:integer; //Скорость анимации.
     isLoop:boolean; //Зациклена ли анимация.
     AnimProcedure:procedure; //Имеет смысл только если анимация не зациклена.
@@ -155,72 +155,83 @@ type
     private
     anims:Dictionary<string, spriteInfo>; //Все анимации по их именам
     curAnim:spriteInfo; //Текущая анимация
-    sprite:PictureWPF;
+    sprite: PictureWPF;
     position:Point;
     updater:Timer;
-    frameNum:Integer; //Номер текущего кадра анимации
-    isVisible:boolean;
+    frameNum:Integer; //Номер текущего кадра анимации.
+    enabledFrame:integer := -1; //Номер текущего включенного кадра.
+    isVisible:boolean := True; //По инициализации спрайт видим.
     
     procedure ChangeSprite();
     begin
-      Redraw(procedure()-> begin
-        sprite.Destroy();
-        sprite:= new PictureWPF(0,0, curAnim.frames[frameNum]);
-        SetPos(position);
-        sprite.Visible := isVisible;
+      Redraw(procedure -> begin
+        if sprite <> nil then sprite.Visible := false;
+        sprite := curAnim.frames[frameNum];
+        sprite.Visible := true and isVisible;
+        sprite := sprite;
+        var p := position; p.x += 24;
+        sprite.Center:=p;
       end);
     end;
     
     //Обновление кадра изображения
     procedure UpdateFrame();
     begin
-      if (frameNum<curAnim.frames.Length-1) then frameNum+=1
-      else if curAnim.isLoop then frameNum:=0
-      else begin updater.Stop(); 
-        if (curAnim.AnimProcedure<>nil) then curAnim.AnimProcedure;
-        exit;
-      end; ChangeSprite();
+      if (frameNum<curAnim.frames.Length-1) then begin frameNum+=1; ChangeSprite(); end
+      else if curAnim.isLoop then begin frameNum:=0; ChangeSprite(); end
+      else begin updater.Stop(); curAnim.AnimProcedure() end;
     end;
 
     function GetPos():Point;
     begin
-      if (sprite <> nil) then Result := sprite.Center
+      if (sprite<>nil) then Result := sprite.Center
       else Result := position;
     end;
     
     ///Устанавливает позицию спрайта
     procedure SetPos(pos:Point);
     begin
-      position := pos;
-      pos.X += 24;
-      sprite.Center := pos;
+      position := pos; pos.X += 24; 
+      if sprite<>nil then sprite.Center := pos;
+    end;
+
+    function GetWidth():integer;
+    begin
+      if sprite<>nil then
+        Result := floor(sprite.Width)
+      else writeln('Ширина спрайта не может быть получена!');
+    end;
+
+    function GetHeight():integer;
+    begin
+      if sprite<>nil then
+        Result := floor(sprite.Height)
+      else writeln('Высота спрайта не может быть получена!');
     end;
 
     public
     ///Конструктор с инициализацией стандартной анимации с обычными параметрами
-    constructor Create(x,y:integer; aname:string; frames:array of string);
+    constructor Create(x,y:integer; aname:string; frames:array of PictureWPF);
     begin
       Create(x,y,aname, frames, 160, True);
     end;
     
     ///Конструктор с инициализацией стандартной анимации
-    constructor Create(x,y:integer; aname:string; frames:array of string; speed:integer; looped:boolean);
+    constructor Create(x,y:integer; aname:string; frames:array of PictureWPF; speed:integer; looped:boolean);
     begin
-      Visible := True;
       position.x := x * 48; position.y := y * 48;     
       anims := new Dictionary<string, spriteInfo>();
       AddAnim(aname, frames, speed, looped);
-      sprite := new PictureWPF(position, anims[aname].frames[0]);
-      updater := new Timer(speed, UpdateFrame);
+      updater := new Timer(100,UpdateFrame);
       SetPos(position);
     end;
    
     ///Принадлежит ли точка спрайту
     function PtInside(x,y:Real):boolean; begin
-    result := LAEngine.PtInside(X,Y,sprite); end;
+    result := LAEngine.PtInside(X,Y,curAnim.frames[frameNum]); end;
     
     ///Добавляет новую анимацию с именем aname
-    procedure AddAnim(aname:string; frames:array of string; speed:integer; looped:boolean; AnimProcedure:procedure:=nil);
+    procedure AddAnim(aname:string; frames:array of PictureWPF; speed:integer; looped:boolean; AnimProcedure:procedure:=nil);
     begin
       var frame:spriteInfo;
       frame.frames:= frames; frame.speed:=speed; frame.isLoop:=looped; frame.AnimProcedure:= AnimProcedure;
@@ -230,40 +241,52 @@ type
     ///Проигрывает анимацию с именем aname
     procedure PlayAnim(aname:string);
     begin
+      updater.Stop();
       curAnim := anims[aname]; frameNum := 0;
-      if (updater.Enabled) then updater.Stop();
-      if (curAnim.frames.Length>1) then begin
-        updater.Interval := curAnim.speed;
-        updater.Start();
-      end; ChangeSprite();
+      updater.Interval := curAnim.speed;
+      updater.Start();
+      ChangeSprite();
     end;
     
     ///Уничтожаем спрайт.
     procedure Destroy();
     begin
-      updater.Stop(); sprite.Destroy(); sprite := nil;
+      foreach var a in anims.Values do begin
+        foreach var t in a.frames do 
+          t.Destroy();
+        a.frames := nil;
+      end;
+      anims.Clear(); anims := nil;
+      sprite := nil;
     end;
-    
     property Pos: Point Read GetPos write SetPos;
 		///Видимость спрайта
     property Visible: boolean write isVisible read isVisible;
-    property Width: integer read floor(sprite.Width);
-    property Height: integer read floor(sprite.Height);
+    property Width: integer read GetWidth;
+    property Height: integer read GetHeight;
   end;
   
   ///Загружает спрайт с именем sname.
-  function LoadSprite(sname:string):array of string;
+  function LoadSprite(sname:string):array of PictureWPF;
   begin
-    Result := new string[1]; Result[0] := 'img/'+sname+'.png';
+    Result := new PictureWPF[1]; Result[0] := new PictureWPF(0,0,'img/'+sname+'.png');
+    Result[0].Visible := false;
   end;
   
   ///Загружает последовательность спрайтов с именем sname и номерами от 1 до count.
-  function LoadSprites(sname:string; count:integer):array of string;
+  function LoadSprites(sname:string; count:integer):array of PictureWPF;
   begin
-    Result := new string[count];
-    for var i:= 0 to count-1 do Result[i] := 'img/'+sname+(i+1)+'.png';
+    var t := new PictureWPF[count];
+    Redraw(procedure -> begin
+      for var i:= 0 to count-1 do begin 
+        t[i] := new PictureWPF(0,0,'img/'+sname+(i+1)+'.png');
+        t[i].Visible := false;
+      end;
+    end);
+    Result := t;
   end;
   //##############-КОНЕЦ_ВСПОМОГАТЕЛЬНЫЙ_БЛОК-################
+  
   //ИГРОВЫЕ СОБЫТИЯ
   var OnPlayerMove: procedure(x,y:integer);
       OnEnterBattle: procedure;
@@ -301,7 +324,7 @@ type
     end;
     
     static procedure ToFront();
-    begin if (pic <> nil) then pic.ToFront(); end;
+    begin if (pic <> nil) then pic.ToFront() end;
   end;
 
   DialogHandler = class
@@ -506,12 +529,12 @@ type
     begin
       inherited Create(x,y);
       (name, hp, attackDmg, agility, Delay) := ('ГОЛЕМ <БОСС>', 30, 10, 8, 2000);
-      Sprite:= new LSprite(x, y, 'Idle', LoadSprites('enemy\Golem\idle', 6));
-      Sprite.AddAnim('Hit', LoadSprites('enemy\Golem\hit', 4), 160, False, procedure()->
+      Sprite:= new LSprite(x, y, 'Idle', LoadSprites('enemy\Golem\idle', 6), 120, True);
+      Sprite.AddAnim('Hit', LoadSprites('enemy\Golem\hit', 4), 120, False, procedure()->
         sprite.PlayAnim('Idle'));
-      Sprite.AddAnim('Attack', LoadSprites('enemy\Golem\attack', 8), 160, False, procedure()->
+      Sprite.AddAnim('Attack', LoadSprites('enemy\Golem\attack', 8), 120, False, procedure()->
         Sprite.PlayAnim('Idle'));
-      Sprite.AddAnim('Death', LoadSprites('enemy\Golem\death', 10), 160, False);
+      Sprite.AddAnim('Death', LoadSprites('enemy\Golem\death', 10), 120, False);
       Sprite.PlayAnim('Idle'); //Включаем как анимацию по умолчанию
       CreateCircleShadowPics(45);
     end;

@@ -386,8 +386,8 @@
 					"type": { "id": "F_Enum", "params": [20] },
 					"isArray": true,
 					"canBeNull": false,
-					"arrayMinLength": null,
-					"arrayMaxLength": null,
+					"arrayMinLength": 1,
+					"arrayMaxLength": 5,
 					"editorDisplayMode": "Hidden",
 					"editorDisplayPos": "Above",
 					"editorAlwaysShow": false,
@@ -615,7 +615,7 @@
 					"layerDefUid": 4,
 					"pxOffsetX": 0,
 					"pxOffsetY": 0,
-					"visible": false,
+					"visible": true,
 					"optionalRules": [],
 					"intGrid": [],
 					"intGridCsv": [],
@@ -1661,6 +1661,44 @@
 									"id": "V_String",
 									"params": ["TreeEnemy"]
 								} ]
+							}]
+						},
+						{
+							"__identifier": "EnemyPoint",
+							"__grid": [8,3],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 18,
+							"px": [384,144],
+							"fieldInstances": [{
+								"__identifier": "Enemys",
+								"__value": [ "Golem", "Golem", "Golem", "Golem", "Golem" ],
+								"__type": "Array<LocalEnum.EnemyType>",
+								"defUid": 21,
+								"realEditorValues": [
+									{
+										"id": "V_String",
+										"params": ["Golem"]
+									},
+									{
+										"id": "V_String",
+										"params": ["Golem"]
+									},
+									{
+										"id": "V_String",
+										"params": ["Golem"]
+									},
+									{
+										"id": "V_String",
+										"params": ["Golem"]
+									},
+									{
+										"id": "V_String",
+										"params": ["Golem"]
+									}
+								]
 							}]
 						}
 					]
