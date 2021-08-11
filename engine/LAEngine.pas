@@ -623,6 +623,11 @@ type
       Dmg -= armor; if Dmg<=0 then Dmg := 1;
       hp -= Dmg; if (hp<=0) then hp := 0;
     end;
+
+    procedure ResetAction();
+    begin
+      actionPoint := 0;
+    end;
     
     property GetHP: integer Read hp;
     property GetMaxHP: integer Read max_hp;
@@ -731,6 +736,7 @@ type
         foreach var tc in EnemyList do begin tc.Destroy(); end; // Уничтожаем врагов
         EnemyList.Clear();
         Enemy.SelectedEnemy := nil; enemyCount := 0;
+        BPlayer.ResetAction();
         CombatPic.Destroy();
       end);
     end;
