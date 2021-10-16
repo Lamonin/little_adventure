@@ -23,8 +23,7 @@ begin var p := from; from := new PictureWPF(p.LeftTop, path); p.Destroy(); end;
 function ChangePicture(var from, too:PictureWPF):PictureWPF;
 begin
   if (from = nil) or (too = nil) then exit;
-  from.Visible := false;
-  too.Visible := true;
+  from.Visible := false; too.Visible := true;
   Result := too;
 end;
 
