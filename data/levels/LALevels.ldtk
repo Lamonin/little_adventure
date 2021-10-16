@@ -427,52 +427,6 @@
 			"fieldDefs": []
 		},
 		{
-			"identifier": "TransitionMessage",
-			"uid": 24,
-			"tags": [],
-			"width": 48,
-			"height": 48,
-			"resizableX": false,
-			"resizableY": false,
-			"keepAspectRatio": false,
-			"fillOpacity": 1,
-			"lineOpacity": 1,
-			"hollow": false,
-			"color": "#80FFB9",
-			"renderMode": "Rectangle",
-			"showName": true,
-			"tilesetId": null,
-			"tileId": null,
-			"tileRenderMode": "FitInside",
-			"maxCount": 1,
-			"limitScope": "PerLevel",
-			"limitBehavior": "MoveLastOne",
-			"pivotX": 0,
-			"pivotY": 0,
-			"fieldDefs": [
-				{
-					"identifier": "Multilines",
-					"__type": "String",
-					"uid": 25,
-					"type": "F_Text",
-					"isArray": false,
-					"canBeNull": true,
-					"arrayMinLength": null,
-					"arrayMaxLength": null,
-					"editorDisplayMode": "Hidden",
-					"editorDisplayPos": "Above",
-					"editorAlwaysShow": false,
-					"editorCutLongValues": true,
-					"min": null,
-					"max": null,
-					"regex": null,
-					"acceptFileTypes": null,
-					"defaultOverride": null,
-					"textLanguageMode": null
-				}
-			]
-		},
-		{
 			"identifier": "Potion",
 			"uid": 33,
 			"tags": [],
@@ -3360,21 +3314,21 @@
 							"px": [480,624],
 							"fieldInstances": [{
 								"__identifier": "Enemys",
-								"__value": [ "Golem", "Skeleton", "Skeleton", "Golem" ],
+								"__value": [ "Skeleton", "Skeleton", "TreeEnemy", "TreeEnemy" ],
 								"__type": "Array<LocalEnum.EnemyType>",
 								"defUid": 21,
 								"realEditorValues": [ {
 									"id": "V_String",
-									"params": ["Golem"]
-								}, {
-									"id": "V_String",
 									"params": ["Skeleton"]
 								}, {
 									"id": "V_String",
 									"params": ["Skeleton"]
 								}, {
 									"id": "V_String",
-									"params": ["Golem"]
+									"params": ["TreeEnemy"]
+								}, {
+									"id": "V_String",
+									"params": ["TreeEnemy"]
 								} ]
 							}]
 						},
@@ -3435,10 +3389,10 @@
 							"px": [432,384],
 							"fieldInstances": [{
 								"__identifier": "Amount",
-								"__value": 8,
+								"__value": 10,
 								"__type": "Int",
 								"defUid": 34,
-								"realEditorValues": [{ "id": "V_Int", "params": [8] }]
+								"realEditorValues": [{ "id": "V_Int", "params": [10] }]
 							}]
 						}
 					]
@@ -3546,6 +3500,9 @@
 						{ "px": [192,96], "src": [1296,144], "f": 0, "t": 147, "d": [58] },
 						{ "px": [768,96], "src": [1344,144], "f": 0, "t": 148, "d": [70] },
 						{ "px": [192,144], "src": [1344,144], "f": 0, "t": 148, "d": [85] },
+						{ "px": [384,192], "src": [48,0], "f": 0, "t": 1, "d": [116] },
+						{ "px": [480,240], "src": [1776,48], "f": 0, "t": 77, "d": [145] },
+						{ "px": [528,240], "src": [1824,48], "f": 0, "t": 78, "d": [146] },
 						{ "px": [1008,240], "src": [1392,144], "f": 0, "t": 149, "d": [156] },
 						{ "px": [576,288], "src": [384,1488], "f": 0, "t": 1248, "d": [174] },
 						{ "px": [624,288], "src": [432,1488], "f": 0, "t": 1249, "d": [175] },
@@ -3554,6 +3511,8 @@
 						{ "px": [672,336], "src": [1392,144], "f": 0, "t": 149, "d": [203] },
 						{ "px": [576,384], "src": [384,1584], "f": 0, "t": 1328, "d": [228] },
 						{ "px": [624,384], "src": [432,1584], "f": 0, "t": 1329, "d": [229] },
+						{ "px": [816,384], "src": [1776,48], "f": 0, "t": 77, "d": [233] },
+						{ "px": [864,384], "src": [1824,48], "f": 0, "t": 78, "d": [234] },
 						{ "px": [144,432], "src": [1392,144], "f": 0, "t": 149, "d": [246] },
 						{ "px": [432,432], "src": [1344,144], "f": 0, "t": 148, "d": [252] },
 						{ "px": [336,480], "src": [1392,144], "f": 0, "t": 149, "d": [277] },
@@ -6320,29 +6279,6 @@
 						},
 						{
 							"__identifier": "EnemyPoint",
-							"__grid": [10,12],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 18,
-							"px": [480,576],
-							"fieldInstances": [{
-								"__identifier": "Enemys",
-								"__value": [ "TreeEnemy", "Skeleton" ],
-								"__type": "Array<LocalEnum.EnemyType>",
-								"defUid": 21,
-								"realEditorValues": [ {
-									"id": "V_String",
-									"params": ["TreeEnemy"]
-								}, {
-									"id": "V_String",
-									"params": ["Skeleton"]
-								} ]
-							}]
-						},
-						{
-							"__identifier": "EnemyPoint",
 							"__grid": [14,12],
 							"__pivot": [0,0],
 							"__tile": null,
@@ -6373,52 +6309,6 @@
 							"height": 48,
 							"defUid": 18,
 							"px": [1104,672],
-							"fieldInstances": [{
-								"__identifier": "Enemys",
-								"__value": [ "TreeEnemy", "Skeleton" ],
-								"__type": "Array<LocalEnum.EnemyType>",
-								"defUid": 21,
-								"realEditorValues": [ {
-									"id": "V_String",
-									"params": ["TreeEnemy"]
-								}, {
-									"id": "V_String",
-									"params": ["Skeleton"]
-								} ]
-							}]
-						},
-						{
-							"__identifier": "EnemyPoint",
-							"__grid": [15,14],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 18,
-							"px": [720,672],
-							"fieldInstances": [{
-								"__identifier": "Enemys",
-								"__value": [ "TreeEnemy", "Skeleton" ],
-								"__type": "Array<LocalEnum.EnemyType>",
-								"defUid": 21,
-								"realEditorValues": [ {
-									"id": "V_String",
-									"params": ["TreeEnemy"]
-								}, {
-									"id": "V_String",
-									"params": ["Skeleton"]
-								} ]
-							}]
-						},
-						{
-							"__identifier": "EnemyPoint",
-							"__grid": [4,13],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 18,
-							"px": [192,624],
 							"fieldInstances": [{
 								"__identifier": "Enemys",
 								"__value": [ "TreeEnemy", "Skeleton" ],
@@ -6488,29 +6378,6 @@
 							"height": 48,
 							"defUid": 18,
 							"px": [1200,192],
-							"fieldInstances": [{
-								"__identifier": "Enemys",
-								"__value": [ "TreeEnemy", "Skeleton" ],
-								"__type": "Array<LocalEnum.EnemyType>",
-								"defUid": 21,
-								"realEditorValues": [ {
-									"id": "V_String",
-									"params": ["TreeEnemy"]
-								}, {
-									"id": "V_String",
-									"params": ["Skeleton"]
-								} ]
-							}]
-						},
-						{
-							"__identifier": "EnemyPoint",
-							"__grid": [24,5],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 18,
-							"px": [1152,240],
 							"fieldInstances": [{
 								"__identifier": "Enemys",
 								"__value": [ "TreeEnemy", "Skeleton" ],
@@ -6602,21 +6469,21 @@
 							"px": [1152,48],
 							"fieldInstances": [{
 								"__identifier": "Amount",
-								"__value": 1,
+								"__value": 5,
 								"__type": "Int",
 								"defUid": 34,
-								"realEditorValues": [{ "id": "V_Int", "params": [1] }]
+								"realEditorValues": [{ "id": "V_Int", "params": [5] }]
 							}]
 						},
 						{
 							"__identifier": "Armor2",
-							"__grid": [2,4],
+							"__grid": [2,8],
 							"__pivot": [0,0],
 							"__tile": { "tilesetUid": 2, "srcRect": [624,0,48,48] },
 							"width": 48,
 							"height": 48,
 							"defUid": 38,
-							"px": [96,192],
+							"px": [96,384],
 							"fieldInstances": [{
 								"__identifier": "Amount",
 								"__value": 7,
@@ -6627,13 +6494,13 @@
 						},
 						{
 							"__identifier": "EnemyPoint",
-							"__grid": [2,10],
+							"__grid": [2,11],
 							"__pivot": [0,0],
 							"__tile": null,
 							"width": 48,
 							"height": 48,
 							"defUid": 18,
-							"px": [96,480],
+							"px": [96,528],
 							"fieldInstances": [{
 								"__identifier": "Enemys",
 								"__value": ["TreeEnemy"],
@@ -6642,26 +6509,6 @@
 								"realEditorValues": [{
 									"id": "V_String",
 									"params": ["TreeEnemy"]
-								}]
-							}]
-						},
-						{
-							"__identifier": "EnemyPoint",
-							"__grid": [2,7],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 18,
-							"px": [96,336],
-							"fieldInstances": [{
-								"__identifier": "Enemys",
-								"__value": ["Skeleton"],
-								"__type": "Array<LocalEnum.EnemyType>",
-								"defUid": 21,
-								"realEditorValues": [{
-									"id": "V_String",
-									"params": ["Skeleton"]
 								}]
 							}]
 						},
@@ -6687,12 +6534,12 @@
 								},
 								{
 									"__identifier": "CanGet",
-									"__value": true,
+									"__value": false,
 									"__type": "Bool",
 									"defUid": 11,
 									"realEditorValues": [{
 										"id": "V_Bool",
-										"params": [ true ]
+										"params": [ false ]
 									}]
 								}
 							]
@@ -6722,36 +6569,13 @@
 						},
 						{
 							"__identifier": "EnemyPoint",
-							"__grid": [18,3],
+							"__grid": [11,2],
 							"__pivot": [0,0],
 							"__tile": null,
 							"width": 48,
 							"height": 48,
 							"defUid": 18,
-							"px": [864,144],
-							"fieldInstances": [{
-								"__identifier": "Enemys",
-								"__value": [ "TreeEnemy", "Skeleton" ],
-								"__type": "Array<LocalEnum.EnemyType>",
-								"defUid": 21,
-								"realEditorValues": [ {
-									"id": "V_String",
-									"params": ["TreeEnemy"]
-								}, {
-									"id": "V_String",
-									"params": ["Skeleton"]
-								} ]
-							}]
-						},
-						{
-							"__identifier": "EnemyPoint",
-							"__grid": [17,2],
-							"__pivot": [0,0],
-							"__tile": null,
-							"width": 48,
-							"height": 48,
-							"defUid": 18,
-							"px": [816,96],
+							"px": [528,96],
 							"fieldInstances": [{
 								"__identifier": "Enemys",
 								"__value": ["TreeEnemy"],
@@ -6761,6 +6585,43 @@
 									"id": "V_String",
 									"params": ["TreeEnemy"]
 								}]
+							}]
+						},
+						{
+							"__identifier": "EnemyPoint",
+							"__grid": [2,4],
+							"__pivot": [0,0],
+							"__tile": null,
+							"width": 48,
+							"height": 48,
+							"defUid": 18,
+							"px": [96,192],
+							"fieldInstances": [{
+								"__identifier": "Enemys",
+								"__value": ["Golem"],
+								"__type": "Array<LocalEnum.EnemyType>",
+								"defUid": 21,
+								"realEditorValues": [{
+									"id": "V_String",
+									"params": ["Golem"]
+								}]
+							}]
+						},
+						{
+							"__identifier": "Potion",
+							"__grid": [2,7],
+							"__pivot": [0,0],
+							"__tile": { "tilesetUid": 2, "srcRect": [192,96,48,48] },
+							"width": 48,
+							"height": 48,
+							"defUid": 33,
+							"px": [96,336],
+							"fieldInstances": [{
+								"__identifier": "Amount",
+								"__value": 25,
+								"__type": "Int",
+								"defUid": 34,
+								"realEditorValues": [{ "id": "V_Int", "params": [25] }]
 							}]
 						}
 					]
