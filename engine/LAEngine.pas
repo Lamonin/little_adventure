@@ -20,10 +20,17 @@ end;
 procedure ChangePicture(var from:PictureWPF; path:string);
 begin var p := from; from := new PictureWPF(p.LeftTop, path); p.Destroy(); end;
 
+function ChangePicture(var from, too:PictureWPF):PictureWPF;
+begin
+  if (from = nil) or (too = nil) then exit;
+  from.Visible := false; too.Visible := true;
+  Result := too;
+end;
+
 function ApplyFontSettings(const obj:ObjectWPF):ObjectWPF;
 begin
-  (obj.FontName, obj.FontColor, obj.FontSize, obj.TextAlignment) := 
-  ('GranaPadano', ARGB(255, 255, 214, 0), 32, Alignment.Center);
+  obj.SetText(obj.Text, 32, 'GranaPadano', ARGB(255, 255, 214, 0));
+  obj.TextAlignment := Alignment.Center;
   Result := obj;
 end;
 //###---------------------------------------------
@@ -76,8 +83,20 @@ type
 
   Button = class
     private
-    pic:PictureWPF; isClicked, isActive:boolean;
+    pic, idle, click:PictureWPF; 
+    isClicked:boolean;
+    isActive:boolean:=True;
     idlePic, clickPic, buttonText:string;
+    hoverPic:RectangleWPF;
+    
+    procedure Hover(x, y: real; mousebutton: integer);
+    begin
+      if isClicked or not isActive then exit;
+      if (PtInside(x,y,pic)) then
+        hoverPic.Visible := True
+      else
+        hoverPic.Visible := False;
+    end;
     
     ///Изменение спрайта на clickPic
     procedure Clicked(x, y: real; mousebutton: integer);
@@ -86,7 +105,7 @@ type
       if (mousebutton <> 1) and (isClicked) then exit;
       if PtInside(x,y,pic) then begin 
         isClicked := True;
-        ChangePicture(pic, clickPic); ApplyText();
+        pic := ChangePicture(pic, click); ApplyText();
       end;
     end;
     
@@ -94,7 +113,7 @@ type
     procedure Process(x, y: real; mousebutton: integer);
     begin
       if (pic = nil) or not isActive then exit;
-      ChangePicture(pic, idlePic); ApplyText();
+      pic := ChangePicture(pic, idle); ApplyText();
       if (mousebutton <> 0) then exit;
       if (OnClick <> nil) and PtInside(x,y,pic) and (isClicked) then OnClick();
       isClicked := False;
@@ -109,9 +128,10 @@ type
 
     procedure SetActive(t:boolean);
     begin
-      isActive := t; var ts:= clickPic;
-      if t then ts:= idlePic;
-      ChangePicture(pic, ts); ApplyText();
+      isActive := t; var ts:= click;
+      if t then ts:= idle
+      else hoverPic.Visible := False;
+      pic := ChangePicture(pic, ts); ApplyText();
     end;
     
     procedure SetText(t:string);
@@ -125,18 +145,32 @@ type
     ///И с изображением по нажатию clickPic.
     constructor Create(x,y:integer; idlePic, clickPic:string);
     begin
-      isActive := True;
       self.idlePic := 'img\ui\' + idlePic;
       self.clickPic := 'img\ui\' + clickPic;
       
-      pic := new PictureWPF(x, y, self.idlePic);
+      idle := new PictureWPF(x, y, self.idlePic);
+      click := new PictureWPF(x,y, self.clickPic);
+      click.Visible := False;
+      pic := idle;
+      hoverPic := new RectangleWPF(x,y,pic.Width, pic.Height, Colors.Transparent, 4, ARGB(255, 255, 214, 0));
+      hoverPic.Visible := false;
       OnMouseDown += Clicked; OnMouseUp += Process;
+      OnMouseMove += Hover;
+    end;
+
+    constructor Create(x,y:integer; text, idlePic, clickPic:string);
+    begin
+      Create(x,y, idlePic, clickPic);
+      Self.Text := text;
+      ApplyText();
     end;
     
     procedure Destroy();
     begin
       OnMouseDown -= Clicked; OnMouseUp -= Process;
+      OnMouseMove -= Hover;
       if (pic = nil) then exit;
+      hoverPic.Destroy();
       pic.Destroy(); pic := nil;
     end;
     
@@ -145,7 +179,7 @@ type
   end;
   
   spriteInfo=record
-    frames:array of string; //Кадры анимации.
+    frames:array of PictureWPF; //Кадры анимации.
     speed:integer; //Скорость анимации.
     isLoop:boolean; //Зациклена ли анимация.
     AnimProcedure:procedure; //Имеет смысл только если анимация не зациклена.
@@ -155,72 +189,83 @@ type
     private
     anims:Dictionary<string, spriteInfo>; //Все анимации по их именам
     curAnim:spriteInfo; //Текущая анимация
-    sprite:PictureWPF;
+    sprite: PictureWPF;
     position:Point;
     updater:Timer;
-    frameNum:Integer; //Номер текущего кадра анимации
-    isVisible:boolean;
+    frameNum:Integer; //Номер текущего кадра анимации.
+    enabledFrame:integer := -1; //Номер текущего включенного кадра.
+    isVisible:boolean := True; //По инициализации спрайт видим.
     
     procedure ChangeSprite();
     begin
-      Redraw(procedure()-> begin
-        sprite.Destroy();
-        sprite:= new PictureWPF(0,0, curAnim.frames[frameNum]);
-        SetPos(position);
-        sprite.Visible := isVisible;
+      Redraw(procedure -> begin
+        if sprite <> nil then sprite.Visible := false;
+        sprite := curAnim.frames[frameNum];
+        sprite.Visible := true and isVisible;
+        sprite := sprite;
+        var p := position; p.x += 24;
+        sprite.Center:=p;
       end);
     end;
     
     //Обновление кадра изображения
     procedure UpdateFrame();
     begin
-      if (frameNum<curAnim.frames.Length-1) then frameNum+=1
-      else if curAnim.isLoop then frameNum:=0
-      else begin updater.Stop(); 
-        if (curAnim.AnimProcedure<>nil) then curAnim.AnimProcedure;
-        exit;
-      end; ChangeSprite();
+      if (frameNum<curAnim.frames.Length-1) then begin frameNum+=1; ChangeSprite(); end
+      else if curAnim.isLoop then begin frameNum:=0; ChangeSprite(); end
+      else begin updater.Stop(); curAnim.AnimProcedure() end;
     end;
 
     function GetPos():Point;
     begin
-      if (sprite <> nil) then Result := sprite.Center
+      if (sprite<>nil) then Result := sprite.Center
       else Result := position;
     end;
     
     ///Устанавливает позицию спрайта
     procedure SetPos(pos:Point);
     begin
-      position := pos;
-      pos.X += 24;
-      sprite.Center := pos;
+      position := pos; pos.X += 24; 
+      if sprite<>nil then sprite.Center := pos;
+    end;
+
+    function GetWidth():integer;
+    begin
+      if sprite<>nil then
+        Result := floor(sprite.Width)
+      else writeln('Ширина спрайта не может быть получена!');
+    end;
+
+    function GetHeight():integer;
+    begin
+      if sprite<>nil then
+        Result := floor(sprite.Height)
+      else writeln('Высота спрайта не может быть получена!');
     end;
 
     public
     ///Конструктор с инициализацией стандартной анимации с обычными параметрами
-    constructor Create(x,y:integer; aname:string; frames:array of string);
+    constructor Create(x,y:integer; aname:string; frames:array of PictureWPF);
     begin
       Create(x,y,aname, frames, 160, True);
     end;
     
     ///Конструктор с инициализацией стандартной анимации
-    constructor Create(x,y:integer; aname:string; frames:array of string; speed:integer; looped:boolean);
+    constructor Create(x,y:integer; aname:string; frames:array of PictureWPF; speed:integer; looped:boolean);
     begin
-      Visible := True;
       position.x := x * 48; position.y := y * 48;     
       anims := new Dictionary<string, spriteInfo>();
       AddAnim(aname, frames, speed, looped);
-      sprite := new PictureWPF(position, anims[aname].frames[0]);
-      updater := new Timer(speed, UpdateFrame);
+      updater := new Timer(100,UpdateFrame);
       SetPos(position);
     end;
    
     ///Принадлежит ли точка спрайту
     function PtInside(x,y:Real):boolean; begin
-    result := LAEngine.PtInside(X,Y,sprite); end;
+    result := LAEngine.PtInside(X,Y,curAnim.frames[frameNum]); end;
     
     ///Добавляет новую анимацию с именем aname
-    procedure AddAnim(aname:string; frames:array of string; speed:integer; looped:boolean; AnimProcedure:procedure:=nil);
+    procedure AddAnim(aname:string; frames:array of PictureWPF; speed:integer; looped:boolean; AnimProcedure:procedure:=nil);
     begin
       var frame:spriteInfo;
       frame.frames:= frames; frame.speed:=speed; frame.isLoop:=looped; frame.AnimProcedure:= AnimProcedure;
@@ -230,40 +275,52 @@ type
     ///Проигрывает анимацию с именем aname
     procedure PlayAnim(aname:string);
     begin
+      updater.Stop();
       curAnim := anims[aname]; frameNum := 0;
-      if (updater.Enabled) then updater.Stop();
-      if (curAnim.frames.Length>1) then begin
-        updater.Interval := curAnim.speed;
-        updater.Start();
-      end; ChangeSprite();
+      updater.Interval := curAnim.speed;
+      updater.Start();
+      ChangeSprite();
     end;
     
     ///Уничтожаем спрайт.
     procedure Destroy();
     begin
-      updater.Stop(); sprite.Destroy(); sprite := nil;
+      foreach var a in anims.Values do begin
+        foreach var t in a.frames do 
+          t.Destroy();
+        a.frames := nil;
+      end;
+      anims.Clear(); anims := nil;
+      sprite := nil;
     end;
-    
     property Pos: Point Read GetPos write SetPos;
 		///Видимость спрайта
     property Visible: boolean write isVisible read isVisible;
-    property Width: integer read floor(sprite.Width);
-    property Height: integer read floor(sprite.Height);
+    property Width: integer read GetWidth;
+    property Height: integer read GetHeight;
   end;
   
   ///Загружает спрайт с именем sname.
-  function LoadSprite(sname:string):array of string;
+  function LoadSprite(sname:string):array of PictureWPF;
   begin
-    Result := new string[1]; Result[0] := 'img/'+sname+'.png';
+    Result := new PictureWPF[1]; Result[0] := new PictureWPF(0,0,'img/'+sname+'.png');
+    Result[0].Visible := false;
   end;
   
   ///Загружает последовательность спрайтов с именем sname и номерами от 1 до count.
-  function LoadSprites(sname:string; count:integer):array of string;
+  function LoadSprites(sname:string; count:integer):array of PictureWPF;
   begin
-    Result := new string[count];
-    for var i:= 0 to count-1 do Result[i] := 'img/'+sname+(i+1)+'.png';
+    var t := new PictureWPF[count];
+    Redraw(procedure -> begin
+      for var i:= 0 to count-1 do begin 
+        t[i] := new PictureWPF(0,0,'img/'+sname+(i+1)+'.png');
+        t[i].Visible := false;
+      end;
+    end);
+    Result := t;
   end;
   //##############-КОНЕЦ_ВСПОМОГАТЕЛЬНЫЙ_БЛОК-################
+  
   //ИГРОВЫЕ СОБЫТИЯ
   var OnPlayerMove: procedure(x,y:integer);
       OnEnterBattle: procedure;
@@ -288,8 +345,8 @@ type
     ///Показать изображение перехода с нужным текстом после загрузки
     static procedure Show(message:string; delay:integer; p:delegate:=nil);
     begin
+      (pic.Visible, pic.Text) := (True, message);
       proc:=p;
-      Redraw(procedure -> (pic.Visible, pic.Text) := (True, message));
       DelayAction(delay, procedure -> Hide());
     end;
     
@@ -301,7 +358,7 @@ type
     end;
     
     static procedure ToFront();
-    begin if (pic <> nil) then pic.ToFront(); end;
+    begin if (pic <> nil) then pic.ToFront() end;
   end;
 
   DialogHandler = class
@@ -421,12 +478,25 @@ type
       OnMouseDown += klik;
     end;
 
-    procedure CreateCircleShadowPics(yOffset:integer);
+    procedure CreateCircleShadowPics();
     begin
-      var sp := Sprite.Pos;
-      ShadowPic := new PictureWPF(sp.X-65, sp.Y+Sprite.Height/2-yOffset, 'img\enemy\shadow.png');
-      CirclePic:= new PictureWPF(sp.X-65, sp.Y+Sprite.Height/2-45,'img\enemy\circle.png');
-      CirclePic.Visible := False;
+      Redraw(procedure -> begin 
+        ShadowPic := new PictureWPF(0,0, 'img\enemy\shadow.png');
+        ShadowPic.Visible := False;
+        CirclePic:= new PictureWPF(0,0,'img\enemy\circle.png');
+        CirclePic.Visible := False;
+      end);
+    end;
+
+    procedure MoveCircleShadowPics(yOffset:integer);
+    begin
+      Redraw(procedure -> begin 
+        var sp := Sprite.Pos;
+        ShadowPic.MoveTo(sp.X-65, sp.Y+Sprite.Height/2-yOffset);
+        ShadowPic.Visible := True;
+        CirclePic.MoveTo(sp.X-65, sp.Y+Sprite.Height/2-45);
+        CirclePic.Visible := False;
+      end);
     end;
 
     procedure Select();
@@ -474,6 +544,7 @@ type
     begin
       inherited Create(x,y);
       (name, hp, attackDmg, agility, Delay) := ('СКЕЛЕТОН', 9, 5, 3, 2000);
+      CreateCircleShadowPics();
       Sprite:= new LSprite(x,y,'Idle',LoadSprites('enemy\Skeleton\idle', 6));
       Sprite.AddAnim('Hit', LoadSprites('enemy\Skeleton\hit', 4), 160, False, procedure()->
         Sprite.PlayAnim('Idle'));
@@ -481,7 +552,7 @@ type
       sprite.PlayAnim('Idle'));
       Sprite.AddAnim('Death', LoadSprites('enemy\Skeleton\death', 5), 160, False);
       Sprite.PlayAnim('Idle');
-      CreateCircleShadowPics(40);
+      MoveCircleShadowPics(40);
     end;
     end;
   
@@ -490,6 +561,7 @@ type
     begin
       inherited Create(x,y);
       (name, hp, attackDmg, agility, Delay) := ('ДРЕВО', 15, 4, 2, 2000);
+      CreateCircleShadowPics();
       Sprite:= new LSprite(x,y,'Idle',LoadSprites('enemy\Sprout\idle', 4));
       Sprite.AddAnim('Hit', LoadSprites('enemy\Sprout\hit', 5), 160, False, procedure()->
         Sprite.PlayAnim('Idle'));
@@ -497,7 +569,7 @@ type
         Sprite.PlayAnim('Idle'));
       Sprite.AddAnim('Death', LoadSprites('enemy\Sprout\death', 8), 160, False);
       Sprite.PlayAnim('Idle');
-      CreateCircleShadowPics(45);
+      MoveCircleShadowPics(45);
     end;
     end;
   
@@ -506,14 +578,15 @@ type
     begin
       inherited Create(x,y);
       (name, hp, attackDmg, agility, Delay) := ('ГОЛЕМ <БОСС>', 30, 10, 8, 2000);
-      Sprite:= new LSprite(x, y, 'Idle', LoadSprites('enemy\Golem\idle', 6));
-      Sprite.AddAnim('Hit', LoadSprites('enemy\Golem\hit', 4), 160, False, procedure()->
+      CreateCircleShadowPics();
+      Sprite:= new LSprite(x, y, 'Idle', LoadSprites('enemy\Golem\idle', 6), 120, True);
+      Sprite.AddAnim('Hit', LoadSprites('enemy\Golem\hit', 4), 120, False, procedure()->
         sprite.PlayAnim('Idle'));
-      Sprite.AddAnim('Attack', LoadSprites('enemy\Golem\attack', 8), 160, False, procedure()->
+      Sprite.AddAnim('Attack', LoadSprites('enemy\Golem\attack', 8), 120, False, procedure()->
         Sprite.PlayAnim('Idle'));
-      Sprite.AddAnim('Death', LoadSprites('enemy\Golem\death', 10), 160, False);
+      Sprite.AddAnim('Death', LoadSprites('enemy\Golem\death', 10), 120, False);
       Sprite.PlayAnim('Idle'); //Включаем как анимацию по умолчанию
-      CreateCircleShadowPics(45);
+      MoveCircleShadowPics(45);
     end;
     end;
   
@@ -548,6 +621,11 @@ type
     begin
       Dmg -= armor; if Dmg<=0 then Dmg := 1;
       hp -= Dmg; if (hp<=0) then hp := 0;
+    end;
+
+    procedure ResetAction();
+    begin
+      actionPoint := 0;
     end;
     
     property GetHP: integer Read hp;
@@ -608,9 +686,14 @@ type
       //Ходит игрок
       if ActionList[i] is BattlePlayer then begin 
         isPlayerTurn:= True; 
-        TurnRect.Text := 'ВАШ ХОД'; i+=1; exit; 
+        TurnRect.Text := 'ВАШ ХОД'; i+=1;
+        b_attack.Active := True;
+        b_run.Active := True;
+        exit; 
       end;
       TurnRect.Text := 'ХОД ПРОТИВНИКА';
+      b_attack.Active := False;
+      b_run.Active := False;
       ActionList[i].Attack(BPlayer);
       BattleHandler.HpPanel.Text := BPlayer.GetHP +'/'+BPlayer.GetMaxHP;
       if BPlayer.GetHP=0 then EndBattle('Lose'); i+=1;
@@ -652,6 +735,7 @@ type
         foreach var tc in EnemyList do begin tc.Destroy(); end; // Уничтожаем врагов
         EnemyList.Clear();
         Enemy.SelectedEnemy := nil; enemyCount := 0;
+        BPlayer.ResetAction();
         CombatPic.Destroy();
       end);
     end;
@@ -660,19 +744,41 @@ type
     begin
       (x, y):=(xc,yc);
       Transition.Show('НАЧАЛО БОЯ', 1000, procedure() -> CombatTimer.Start);
-      CombatPic := new PictureWPF(0, 0,'data\levels\LALevels\png\CombatField.png');
-      BattleHandler.EnemyList:= new List<Enemy>();
-      for var i:= 0 to enemys.Length-1 do
-        case (i+1) of
-            1: CreateEnemy(enemys[i], 13, 5);
-            2: CreateEnemy(enemys[i], 16, 3);
-            3: CreateEnemy(enemys[i], 10, 3);
-            4: CreateEnemy(enemys[i], 7, 5);
-            5: CreateEnemy(enemys[i], 19, 5);
-        end;
-      //Инициализируем элементы интерфейса боя
-      b_attack:= new Button(167, 692, 'rect_button_battle.png', 'rect_button_battle_click.png');
-      b_attack.Text := 'АТАКА';
+      //Отрисовка интерфейса боя
+      Redraw(procedure -> begin
+        CombatPic := new PictureWPF(0, 0,'data\levels\LALevels\png\CombatField.png');
+        b_attack:= new Button(167, 692, 'АТАКА','rect_button_battle.png', 'rect_button_battle_click.png');
+        b_run:= new Button(656, 692, 'ПОБЕГ', 'rect_button_battle.png', 'rect_button_battle_click.png');
+
+        TurnRect := new PictureWPF(327, 572, 'img\ui\rect_battle_turn.png');
+        TurnRect := ApplyFontSettings(TurnRect) as PictureWPF;
+        TurnRect.FontSize := 28;
+        
+        EnemyPanel:= new PictureWPF(167, 616, 'img\ui\rect_panel_battle.png');
+        EnemyPanel := ApplyFontSettings(EnemyPanel) as PictureWPF;
+
+        HpPanel := new PictureWPF(167, 572, 'img\ui\hp_bar.png');
+        ArmorPanel := new PictureWPF(936, 572, 'img\ui\rect_battle_mini.png');
+        DamagePanel := new PictureWPF(1041, 572, 'img\ui\rect_battle_mini.png');
+
+        var icon := new PictureWPF(0,0,'img\ui\icon_hp.png');
+        HpPanel.AddChild(icon, Alignment.LeftTop);
+        HpPanel := ApplyFontSettings(HpPanel) as PictureWPF;
+        HpPanel.Text := BPlayer.GetHP +'/'+BPlayer.GetMaxHP;
+        
+        icon := new PictureWPF(0,0,'img\ui\icon_armor.png');
+        ArmorPanel.AddChild(icon, Alignment.LeftTop);
+        ArmorPanel := ApplyFontSettings(ArmorPanel) as PictureWPF;
+        ArmorPanel.Text := BPlayer.SetGetArmor.ToString();
+
+        icon := new PictureWPF(0,0,'img\ui\icon_damage.png');
+        DamagePanel.AddChild(icon, Alignment.LeftTop);
+        DamagePanel := ApplyFontSettings(DamagePanel) as PictureWPF;
+        DamagePanel.Text := BPlayer.GetDamage.ToString();
+
+        EnemyPanel.Text := '';
+      end);
+      
       b_attack.OnClick += procedure() -> begin
         if (BattleHandler.isPlayerTurn) and (Enemy.SelectedEnemy<> nil) then
         begin BattleHandler.isPlayerTurn:= False;
@@ -681,43 +787,25 @@ type
           Enemy.SelectedEnemy.Deselect();
         end;
       end;
-
-      b_run:= new Button(656, 692, 'rect_button_battle.png', 'rect_button_battle_click.png');
-      b_run.Text := 'ПОБЕГ';
+     
       b_run.OnClick += procedure() -> begin
         b_run.isActive := False;
         BattleHandler.EndBattle('Run');
       end;
-      
-      TurnRect := new PictureWPF(327, 572, 'img\ui\rect_battle_turn.png');
-      TurnRect := ApplyFontSettings(TurnRect) as PictureWPF;
-      TurnRect.FontSize := 28;
-      
-      EnemyPanel:= new PictureWPF(167, 616, 'img\ui\rect_panel_battle.png');
-      EnemyPanel := ApplyFontSettings(EnemyPanel) as PictureWPF;
-
-      HpPanel := new PictureWPF(167, 572, 'img\ui\hp_bar.png');
-      ArmorPanel := new PictureWPF(936, 572, 'img\ui\rect_battle_mini.png');
-      DamagePanel := new PictureWPF(1041, 572, 'img\ui\rect_battle_mini.png');
-
-      var icon := new PictureWPF(0,0,'img\ui\icon_hp.png');
-      HpPanel.AddChild(icon, Alignment.LeftTop);
-      HpPanel := ApplyFontSettings(HpPanel) as PictureWPF;
-      HpPanel.Text := BPlayer.GetHP +'/'+BPlayer.GetMaxHP;
-      
-      icon := new PictureWPF(0,0,'img\ui\icon_armor.png');
-      ArmorPanel.AddChild(icon, Alignment.LeftTop);
-      ArmorPanel := ApplyFontSettings(ArmorPanel) as PictureWPF;
-      ArmorPanel.Text := BPlayer.SetGetArmor.ToString();
-
-      icon := new PictureWPF(0,0,'img\ui\icon_damage.png');
-      DamagePanel.AddChild(icon, Alignment.LeftTop);
-      DamagePanel := ApplyFontSettings(DamagePanel) as PictureWPF;
-      DamagePanel.Text := BPlayer.GetDamage.ToString();
-      //Закончили инициализацию интерфейса
-      EnemyPanel.Text := '';
+      b_attack.Active := False;
+      b_run.Active := False;
+      //Спавним противников
+      BattleHandler.EnemyList:= new List<Enemy>();
+      for var i:= enemys.Length-1 downto 0 do
+        case (i+1) of
+            3: CreateEnemy(enemys[i], 10, 3);
+            2: CreateEnemy(enemys[i], 16, 3);
+            4: CreateEnemy(enemys[i], 7, 5);
+            1: CreateEnemy(enemys[i], 13, 5);
+            5: CreateEnemy(enemys[i], 19, 5);
+        end;
       foreach var t in EnemyList do begin if not t.GetDeath then EnemyPanel.Text += t.GetName + '  |  '; end;
-      
+      //Начало боя
       CombatTimer := new Timer(250, procedure() ->
       begin
         if (StopTimer) then exit;
@@ -732,7 +820,6 @@ type
         begin Stoptimer:= True; ProcessAttack(ActionList); end;
         end);
       end;
-
     end;
 
   MessageCell = class (UseObject)
@@ -1075,7 +1162,7 @@ type
     Grid := t; // Обнуляем таким образом сетку уровня
   end;
   
-  ///Меняет текущий уровень на уровень с именем lname.
+  ///Меняет текущий уровень на уровень с именем lname и сохраняет прогресс игрока.
   procedure ChangeLevel(lname:string);
   begin
     CloseLevel();
@@ -1085,7 +1172,7 @@ type
     if (BPlayer <> nil) then begin
       loader.SetValue('hp', BPlayer.GetHP);
       loader.SetValue('armor', BPlayer.SetGetArmor);
-      end;
+    end;
     loader.SaveFile();
     LoadLevel(lname);
   end;
@@ -1095,22 +1182,18 @@ type
   var b_confirm, b_cancel: Button;
   begin
     var r_body := new PictureWPF(384, 280, 'img\ui\rect_confirm.png');
-    r_body.Text := text;
     r_body := ApplyFontSettings(r_body) as PictureWPF;
+    r_body.Text := text;
 
-    b_confirm := new Button(384, 424, 'rect_menu_rules_wide.png', 'rect_menu_rules_wide_click.png');
-    b_confirm.Text := 'ОК';
-    b_cancel := new Button(656, 424, 'rect_menu_rules_wide.png', 'rect_menu_rules_wide_click.png');
-    b_cancel.Text := 'ОТМЕНА';
+    b_confirm := new Button(384, 424, 'ОК', 'rect_menu_rules_wide.png', 'rect_menu_rules_wide_click.png');
+    b_cancel := new Button(656, 424, 'ОТМЕНА', 'rect_menu_rules_wide.png', 'rect_menu_rules_wide_click.png');
     
-    b_confirm.OnClick += procedure() -> begin 
-      confirm; 
-      r_body.Destroy(); b_confirm.Destroy(); b_cancel.Destroy(); 
+    b_confirm.OnClick += procedure -> begin 
+      confirm; r_body.Destroy(); b_confirm.Destroy(); b_cancel.Destroy(); 
     end;
     
-    b_cancel.OnClick += procedure() -> begin
-      cancel; 
-      r_body.Destroy(); b_confirm.Destroy(); b_cancel.Destroy(); 
+    b_cancel.OnClick += procedure -> begin
+      cancel; r_body.Destroy(); b_confirm.Destroy(); b_cancel.Destroy(); 
     end;
   end;
   
@@ -1118,17 +1201,14 @@ type
   var b_continue, b_startNew, b_exit:Button;
   begin
     var loader := new LALoader('data/userdata.json');
-    b_continue := new Button(510, 561, 'rect_menu_wide.png', 'rect_menu_wide_click.png');
-    b_continue.Text := 'ПРОДОЛЖИТЬ'; 
-    if loader.GetValue&<string>('current_level') = '' then b_continue.Active := False;
-    
-    b_startNew := new Button(510, 625, 'rect_menu_wide.png', 'rect_menu_wide_click.png');
-    b_startNew.Text := 'НОВАЯ ИГРА';
+    //Отрисовка интерфейса меню
+    Redraw(procedure -> begin
+      b_continue := new Button(510, 561, 'ПРОДОЛЖИТЬ', 'rect_menu_wide.png', 'rect_menu_wide_click.png');
+      b_continue.Active := loader.GetValue&<string>('current_level') <> '';
+      b_startNew := new Button(510, 625, 'НОВАЯ ИГРА', 'rect_menu_wide.png', 'rect_menu_wide_click.png');
+      b_exit := new Button(510, 689, 'ВЫХОД', 'rect_menu_wide.png', 'rect_menu_wide_click.png');
+    end);
 
-    ///Завершает работу игры.
-    b_exit := new Button(510, 689, 'rect_menu_wide.png', 'rect_menu_wide_click.png');
-    b_exit.Text := 'ВЫХОД';
-    
     //Делегат, при вызове удаляет кнопки
     var delButtons := procedure() -> begin
       b_continue.Destroy(); b_startNew.Destroy();
@@ -1164,7 +1244,7 @@ type
     Window.IsFixedSize := True; Window.SetSize(1296, 768);
     Window.CenterOnScreen();
 
-    BgPic := new PictureWPF(0,0, 'img\MainMenuField1.png');   
+    BgPic := new PictureWPF(0,0, 'data\levels\LALevels\png\MenuBackground.png');   
     DrawMainMenu();
   end; 
 end.
