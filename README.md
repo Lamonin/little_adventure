@@ -1,14 +1,14 @@
 # Little Adventure
-Little Adventure - a simple game made on PascalABC.NET
+Little Adventure – is a simple 2D game made in PascalABC.Net + WPFObjects using the LDtk level editor and JSON.Net library.
 
-Rules: There are several battle points hidden in each level. In order to advance to the next level, you must defeat the enemies at all of these points.
+Rules: All levels must be completed. There are several battle points hidden in each of them. All enemies must be defeated to advance to the next level.
 
 Control:
 1) WASD - character movement;
 2) E - interaction with objects, continuing/ending dialog.
 
 
-Правила: На каждом уровне скрыто несколько точек боя. Для того, чтобы перейти на следующий уровень, необходимо победить врагов на всех этих точках.
+Правила: необходимо пройти все уровни. На каждом из них скрыто несколько точек боя. Для перехода на следующий уровень необходимо победить всех врагов.
 
 Управление:
 1) WASD - передвижение персонажа;
