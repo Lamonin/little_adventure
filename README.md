@@ -6,10 +6,3 @@ Rules: All levels must be completed. There are several battle points hidden in e
 Control:
 1) WASD - character movement;
 2) E - interaction with objects, continuing/ending dialog.
-
-
-Правила: необходимо пройти все уровни. На каждом из них скрыто несколько точек боя. Для перехода на следующий уровень необходимо победить всех врагов.
-
-Управление:
-1) WASD - передвижение персонажа;
-2) E - взаимодействовать с объектами, продолжить/завершить диалог.
